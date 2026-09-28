@@ -6,17 +6,17 @@ alone would predict: "this defence is unusually open given where the ball is".
 This is the baseline requirement from the plan applied to the measure itself.
 """
 import sys
-sys.path.insert(0, "src")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2] / "src"))
 import numpy as np
 from sklearn.ensemble import HistGradientBoostingRegressor, HistGradientBoostingClassifier
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import cross_val_predict
 
-from pitchgraph.io.loader import StatsBomb
-from pitchgraph.model.frames import build_snapshots, event_time_seconds
-from pitchgraph.model.routes import RouteSolver
-from pitchgraph.model.availability import AvailabilitySolver
-from pitchgraph.model.resistance import lane_pressure, reception_pressure
+from pitchgraph.data.statsbomb import StatsBomb
+from pitchgraph.data.frames import build_snapshots, event_time_seconds
+from pitchgraph.legacy.routes import RouteSolver
+from pitchgraph.legacy.availability import AvailabilitySolver
+from pitchgraph.geometry.resistance import lane_pressure, reception_pressure
 
 sb = StatsBomb()
 rows, y = [], []

@@ -6,13 +6,13 @@ we fit them: every attempted pass with a 360 frame is a labelled trial of
 "did the ball survive this lane against this defensive configuration".
 """
 import sys
-sys.path.insert(0, "src")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2] / "src"))
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score, brier_score_loss
 
-from pitchgraph.io.loader import StatsBomb
-from pitchgraph.model.frames import build_snapshots
+from pitchgraph.data.statsbomb import StatsBomb
+from pitchgraph.data.frames import build_snapshots
 
 sb = StatsBomb()
 matches = [m["match_id"] for m in sb.matches(43, 106)][:24]

@@ -6,14 +6,14 @@ secondary-check role the plan allows. If threat were fitted to outcomes this
 test would be circular and worthless.
 """
 import sys
-sys.path.insert(0, "src")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2] / "src"))
 import numpy as np
 from sklearn.metrics import roc_auc_score
 
-from pitchgraph.io.loader import StatsBomb
-from pitchgraph.model.frames import build_snapshots, event_time_seconds
-from pitchgraph.model.routes import RouteSolver
-from pitchgraph.model.availability import AvailabilitySolver
+from pitchgraph.data.statsbomb import StatsBomb
+from pitchgraph.data.frames import build_snapshots, event_time_seconds
+from pitchgraph.legacy.routes import RouteSolver
+from pitchgraph.legacy.availability import AvailabilitySolver
 
 sb = StatsBomb()
 X, y, meta = [], [], []

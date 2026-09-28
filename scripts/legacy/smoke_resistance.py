@@ -1,10 +1,10 @@
 import sys
-sys.path.insert(0, "src")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2] / "src"))
 import time
 import numpy as np
-from pitchgraph.io.loader import StatsBomb
-from pitchgraph.model.frames import build_snapshots
-from pitchgraph.model.resistance import ResistanceGraph
+from pitchgraph.data.statsbomb import StatsBomb
+from pitchgraph.data.frames import build_snapshots
+from pitchgraph.geometry.resistance import ResistanceGraph
 
 sb = StatsBomb()
 snaps = build_snapshots(sb, 3869685, {"Pass", "Carry"})

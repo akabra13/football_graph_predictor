@@ -24,8 +24,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from .frames import DEFENDING_GOAL, PITCH_WIDTH, Snapshot
-from .resistance import lane_pressure
+from pitchgraph.data.frames import DEFENDING_GOAL, PITCH_WIDTH, Snapshot
+from pitchgraph.geometry.resistance import lane_pressure
 
 # Feature order is fixed so arrays can be stacked and compared across snapshots.
 FEATURE_NAMES = [

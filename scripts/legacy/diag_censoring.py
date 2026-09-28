@@ -1,11 +1,11 @@
 """Censoring check from the plan: is threat an artefact of what the camera saw?"""
 import sys
-sys.path.insert(0, "src")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2] / "src"))
 import numpy as np
-from pitchgraph.io.loader import StatsBomb
-from pitchgraph.model.frames import build_snapshots
-from pitchgraph.model.routes import RouteSolver
-from pitchgraph.model.availability import AvailabilitySolver
+from pitchgraph.data.statsbomb import StatsBomb
+from pitchgraph.data.frames import build_snapshots
+from pitchgraph.legacy.routes import RouteSolver
+from pitchgraph.legacy.availability import AvailabilitySolver
 
 sb = StatsBomb()
 rows = []

@@ -1,14 +1,14 @@
 """Do the geometric vulnerability features beat a positional baseline?"""
 import sys
-sys.path.insert(0, "src")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2] / "src"))
 import numpy as np
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import cross_val_predict, GroupKFold
 
-from pitchgraph.io.loader import StatsBomb
-from pitchgraph.model.frames import build_snapshots, event_time_seconds
-from pitchgraph.model.vulnerability import FEATURE_NAMES, features
+from pitchgraph.data.statsbomb import StatsBomb
+from pitchgraph.data.frames import build_snapshots, event_time_seconds
+from pitchgraph.geometry.shape import FEATURE_NAMES, features
 
 sb = StatsBomb()
 F, y, groups, pos = [], [], [], []

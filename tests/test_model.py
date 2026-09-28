@@ -6,14 +6,14 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from pitchgraph.model.frames import Snapshot  # noqa: E402
-from pitchgraph.model.resistance import (  # noqa: E402
+from pitchgraph.data.frames import Snapshot  # noqa: E402
+from pitchgraph.geometry.resistance import (  # noqa: E402
     lane_pressure,
     pass_success,
     reception_pressure,
     shot_probability,
 )
-from pitchgraph.model.vulnerability import FEATURE_NAMES, _back_line, features  # noqa: E402
+from pitchgraph.geometry.shape import FEATURE_NAMES, _back_line, features  # noqa: E402
 
 FULL_PITCH = np.array([[0.0, 0.0], [120.0, 0.0], [120.0, 80.0], [0.0, 80.0], [0.0, 0.0]])
 

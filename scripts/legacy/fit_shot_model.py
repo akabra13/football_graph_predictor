@@ -1,8 +1,8 @@
 """Calibrate the terminal shot probability against real StatsBomb xG."""
 import sys
-sys.path.insert(0, "src")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2] / "src"))
 import numpy as np
-from pitchgraph.io.loader import StatsBomb
+from pitchgraph.data.statsbomb import StatsBomb
 
 sb = StatsBomb()
 matches = sb.matches(43, 106)

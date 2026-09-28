@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .vulnerability import _back_line
+from pitchgraph.geometry.shape import _back_line
 
 PROFILE_NAMES = [
     "behind_rate",     # passes played beyond the last defensive line

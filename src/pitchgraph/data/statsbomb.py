@@ -1,17 +1,20 @@
-"""Fetch and cache StatsBomb Open Data.
+"""Fetch StatsBomb Open Data.
 
 Two things this module exists to get right:
 
 1. Every read is explicitly UTF-8. The repo's JSON is UTF-8 and Python on Windows
    defaults to cp1252, which raises UnicodeDecodeError on the first accented name.
-2. Files are cached to disk. A single match's 360 file is ~9MB; re-downloading
-   during iteration is slow enough to change how you work.
+2. Nothing is written to disk unless a cache directory is explicitly given (see
+   `pitchgraph.config`). By default responses are held in memory for the life of
+   the process only. The ingest pipeline converts raw JSON straight to Parquet
+   in the configured data root, so a raw-JSON cache is never needed there either.
 """
 
 from __future__ import annotations
 
 import json
 import time
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
@@ -20,8 +23,8 @@ import requests
 BASE = "https://raw.githubusercontent.com/statsbomb/open-data/master/data"
 
 # Competition/season pairs that carry 360 freeze-frames, verified against
-# competitions.json. Everything in this project depends on 360, so these are
-# the only seasons that are usable.
+# competitions.json. Event data covers all 80 open competition-seasons; these 12
+# additionally support the defensive-shape (tier B) analyses.
 SEASONS_WITH_360 = {
     ("FIFA World Cup", "2022"): (43, 106),
     ("UEFA Euro", "2024"): (55, 282),
@@ -39,25 +42,33 @@ SEASONS_WITH_360 = {
 
 WORLD_CUP_2022 = (43, 106)
 
-DEFAULT_CACHE = Path(__file__).resolve().parents[3] / "data" / "cache"
-
-
 class StatsBomb:
-    """Reader for StatsBomb Open Data with a local disk cache."""
+    """Reader for StatsBomb Open Data.
 
-    def __init__(self, cache_dir: Path | str | None = None, timeout: int = 120):
-        self.cache = Path(cache_dir) if cache_dir else DEFAULT_CACHE
-        self.cache.mkdir(parents=True, exist_ok=True)
+    `cache_dir=None` (the default) never touches the disk: recent responses are
+    kept in a small in-memory LRU so repeated calls within one run are cheap.
+    """
+
+    def __init__(self, cache_dir: Path | str | None = None, timeout: int = 120,
+                 memory_items: int = 16):
+        self.cache = Path(cache_dir) if cache_dir else None
+        if self.cache is not None:
+            self.cache.mkdir(parents=True, exist_ok=True)
         self.timeout = timeout
         self._session = requests.Session()
+        self._memory: OrderedDict[str, Any] = OrderedDict()
+        self._memory_items = memory_items
 
     def _get(self, rel: str) -> Any:
-        """Fetch `rel` (e.g. 'events/3869685.json'), caching the raw bytes."""
-        dest = self.cache / rel
-        if dest.exists():
-            return json.loads(dest.read_text(encoding="utf-8"))
+        """Fetch `rel` (e.g. 'events/3869685.json')."""
+        if rel in self._memory:
+            self._memory.move_to_end(rel)
+            return self._memory[rel]
 
-        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest = self.cache / rel if self.cache is not None else None
+        if dest is not None and dest.exists():
+            return self._remember(rel, json.loads(dest.read_text(encoding="utf-8")))
+
         url = f"{BASE}/{rel}"
         for attempt in range(3):
             try:
@@ -73,8 +84,16 @@ class StatsBomb:
 
         # Decode explicitly rather than trusting requests' charset guess.
         text = r.content.decode("utf-8")
-        dest.write_text(text, encoding="utf-8")
-        return json.loads(text)
+        if dest is not None:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(text, encoding="utf-8")
+        return self._remember(rel, json.loads(text))
+
+    def _remember(self, rel: str, obj: Any) -> Any:
+        self._memory[rel] = obj
+        while len(self._memory) > self._memory_items:
+            self._memory.popitem(last=False)
+        return obj
 
     def competitions(self) -> list[dict]:
         return self._get("competitions.json")

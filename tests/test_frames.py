@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from pitchgraph.model.frames import (  # noqa: E402
+from pitchgraph.data.frames import (  # noqa: E402
     DEFENDING_GOAL,
     PITCH_LENGTH,
     PITCH_WIDTH,

@@ -1,7 +1,7 @@
 import sys
-sys.path.insert(0, "src")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2] / "src"))
 from collections import Counter
-from pitchgraph.io.loader import StatsBomb
+from pitchgraph.data.statsbomb import StatsBomb
 sb = StatsBomb()
 e = sb.events(3869685)
 ps = [x for x in e if x["type"]["name"] == "Pass"]

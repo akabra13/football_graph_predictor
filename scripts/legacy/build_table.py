@@ -5,13 +5,13 @@ data/cache/table.npz and every validation script reads it. Caching also means
 each experiment runs against exactly the same rows.
 """
 import sys
-sys.path.insert(0, "src")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2] / "src"))
 import numpy as np
 
-from pitchgraph.io.loader import StatsBomb
-from pitchgraph.model.frames import build_snapshots, event_time_seconds
-from pitchgraph.model.vulnerability import FEATURE_NAMES, features
-from pitchgraph.model.ability import PROFILE_NAMES, profiles_leave_one_out
+from pitchgraph.data.statsbomb import StatsBomb
+from pitchgraph.data.frames import build_snapshots, event_time_seconds
+from pitchgraph.geometry.shape import FEATURE_NAMES, features
+from pitchgraph.legacy.ability import PROFILE_NAMES, profiles_leave_one_out
 
 OUT = "data/cache/table.npz"
 COMP, SEASON = 43, 106

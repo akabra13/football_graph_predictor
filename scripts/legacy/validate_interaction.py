@@ -25,7 +25,7 @@ Guards against circularity:
   * the interaction must beat both main effects and ball position.
 """
 import sys
-sys.path.insert(0, "src")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2] / "src"))
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 

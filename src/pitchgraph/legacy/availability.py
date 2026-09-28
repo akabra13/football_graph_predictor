@@ -26,8 +26,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .frames import DEFENDING_GOAL
-from .resistance import (
+from pitchgraph.data.frames import DEFENDING_GOAL
+from pitchgraph.geometry.resistance import (
     ResistanceParams,
     lane_pressure,
     pass_success,

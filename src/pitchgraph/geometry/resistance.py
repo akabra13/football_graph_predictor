@@ -32,7 +32,7 @@ from dataclasses import dataclass
 import networkx as nx
 import numpy as np
 
-from .frames import DEFENDING_GOAL, PITCH_LENGTH, PITCH_WIDTH, Snapshot
+from pitchgraph.data.frames import DEFENDING_GOAL, PITCH_LENGTH, PITCH_WIDTH, Snapshot
 
 GOAL = "GOAL"
 
