@@ -173,11 +173,12 @@ def match_row(m: dict, comp: dict) -> dict:
     }
 
 
-def ingest_match(m: dict, comp: dict) -> dict[str, pl.DataFrame]:
+def ingest_match(m: dict, comp: dict, with_frames: bool = True) -> dict[str, pl.DataFrame]:
     """Download one match into memory and flatten it. Nothing touches disk."""
     sb = _client()
     mid = m["match_id"]
-    frames = sb.frames(mid) if m.get("match_status_360") == "available" else []
+    has_360 = m.get("match_status_360") == "available"
+    frames = sb.frames(mid) if (with_frames and has_360) else []
     ids = {f["event_uuid"] for f in frames}
     out = {
         "matches": pl.DataFrame([match_row(m, comp)]),
