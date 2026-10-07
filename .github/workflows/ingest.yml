@@ -1,9 +1,12 @@
 name: Ingest StatsBomb lake to Drive
 
 # Runs the existing scripts/ingest.py on GitHub's runner instead of the
-# laptop, writing straight through to Google Drive via a service account
-# mounted with rclone -- the same "data goes to Drive, never the local
-# machine" model the Colab notebook uses, just triggered without a browser.
+# laptop, pulling/pushing the lake to Google Drive via rclone + a service
+# account before and after -- the same "data goes to Drive, never the
+# local machine" model the Colab notebook uses, just triggered without a
+# browser. Explicit copy (not a FUSE mount) so the push step is a plain
+# synchronous command rather than relying on unmount to flush cached
+# writes.
 #
 # One-time setup needed before this can run: see
 # docs/github_actions_drive_setup.md for creating the service account,
@@ -54,22 +57,19 @@ jobs:
           root_folder_id = ${GDRIVE_FOLDER_ID}
           EOF
 
-      - name: Mount Drive
+      - name: Pull existing lake from Drive (resume support)
         run: |
-          sudo apt-get update -y && sudo apt-get install -y fuse3
-          mkdir -p "$HOME/gdrive"
-          rclone mount gdrive: "$HOME/gdrive" --daemon --vfs-cache-mode writes
-          sleep 5
-          ls "$HOME/gdrive"
+          mkdir -p "$HOME/pitchgraph"
+          rclone copy gdrive: "$HOME/pitchgraph" --fast-list -v
 
       - name: Ingest
         env:
-          PITCHGRAPH_DATA: /home/runner/gdrive
+          PITCHGRAPH_DATA: /home/runner/pitchgraph
           ONLY: ${{ inputs.only }}
           WORKERS: ${{ inputs.workers }}
         run: |
           python scripts/ingest.py ${ONLY:+--only $ONLY} --workers "$WORKERS"
 
-      - name: Unmount Drive
+      - name: Push lake to Drive
         if: always()
-        run: fusermount -u "$HOME/gdrive" || true
+        run: rclone copy "$HOME/pitchgraph" gdrive: --fast-list -v
