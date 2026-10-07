@@ -1,0 +1,75 @@
+name: Ingest StatsBomb lake to Drive
+
+# Runs the existing scripts/ingest.py on GitHub's runner instead of the
+# laptop, writing straight through to Google Drive via a service account
+# mounted with rclone -- the same "data goes to Drive, never the local
+# machine" model the Colab notebook uses, just triggered without a browser.
+#
+# One-time setup needed before this can run: see
+# docs/github_actions_drive_setup.md for creating the service account,
+# sharing the Drive folder with it, and adding the two repo secrets this
+# workflow reads (GDRIVE_SA_KEY_JSON, GDRIVE_FOLDER_ID).
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Space-separated competition-season keys (blank = everything not yet ingested)"
+        required: false
+        default: ""
+      workers:
+        description: "Concurrent download workers"
+        required: false
+        default: "8"
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pitchgraph
+        run: pip install -e .
+
+      - name: Install rclone
+        run: curl https://rclone.org/install.sh | sudo bash
+
+      - name: Configure rclone service account
+        env:
+          GDRIVE_SA_KEY_JSON: ${{ secrets.GDRIVE_SA_KEY_JSON }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          mkdir -p ~/.config/rclone
+          printf '%s' "$GDRIVE_SA_KEY_JSON" > /tmp/sa.json
+          cat > ~/.config/rclone/rclone.conf <<EOF
+          [gdrive]
+          type = drive
+          scope = drive
+          service_account_file = /tmp/sa.json
+          root_folder_id = ${GDRIVE_FOLDER_ID}
+          EOF
+
+      - name: Mount Drive
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y fuse3
+          mkdir -p /mnt/gdrive
+          rclone mount gdrive: /mnt/gdrive --daemon --vfs-cache-mode writes
+          sleep 5
+          ls /mnt/gdrive
+
+      - name: Ingest
+        env:
+          PITCHGRAPH_DATA: /mnt/gdrive
+          ONLY: ${{ inputs.only }}
+          WORKERS: ${{ inputs.workers }}
+        run: |
+          python scripts/ingest.py ${ONLY:+--only $ONLY} --workers "$WORKERS"
+
+      - name: Unmount Drive
+        if: always()
+        run: fusermount -u /mnt/gdrive || true
