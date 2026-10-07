@@ -72,4 +72,5 @@ jobs:
 
       - name: Push lake to Drive
         if: always()
-        run: rclone copy "$HOME/pitchgraph" gdrive: --fast-list -v
+        run: |
+          rclone copy "$HOME/pitchgraph" gdrive: --fast-list -v
