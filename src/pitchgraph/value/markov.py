@@ -76,6 +76,19 @@ def classify_actions(events: pl.LazyFrame, open_play_only: bool = True) -> pl.La
     return ev
 
 
+def solve_values(move: np.ndarray, shoot: np.ndarray, xg: np.ndarray) -> np.ndarray:
+    """Exact zone values of an absorbing chain.
+
+    move[i, j]  P(next action in zone i moves the ball to zone j)
+    shoot[i]    P(next action in zone i is a shot);  xg[i] its mean xG
+    Whatever probability is left in a row is losing the ball (worth 0).
+
+        V = shoot * xg + move @ V    =>    (I - move) V = shoot * xg
+    """
+    n = len(shoot)
+    return np.linalg.solve(np.eye(n) - move, shoot * xg)
+
+
 @dataclass
 class MarkovValue:
     """Absorbing-chain possession value. Fit with `fit`, then value actions."""
@@ -119,8 +132,7 @@ class MarkovValue:
         g = np.divide(xg_sum, n_shot, out=np.zeros(n), where=n_shot > 0)
         T = np.divide(T, n_move[:, None], out=np.zeros_like(T), where=n_move[:, None] > 0)
 
-        A = np.eye(n) - m[:, None] * T
-        self.values = np.linalg.solve(A, s * g)
+        self.values = solve_values(m[:, None] * T, s, g)
         self.counts = total
         self._parts = {"s": s, "m": m, "g": g}
         return self

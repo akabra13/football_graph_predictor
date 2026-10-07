@@ -73,6 +73,35 @@ def estimate(frame: pl.DataFrame, stat: Callable[[pl.DataFrame], float],
                     _label(value, lo, hi, league, halves))
 
 
+def estimate_ratio(num: np.ndarray, den: np.ndarray, league: float | None = None,
+                   n_boot: int = 1000, seed: int = 0) -> Estimate:
+    """Fast path for ledger claims: value = sum(num) / sum(den) over matches.
+
+    Rows are matches in chronological (or id) order. Resampling rows is the same
+    bootstrap-by-match as `estimate`, without re-running any analysis, so it
+    affords 1000 resamples in milliseconds. Split halves are alternate rows,
+    matching `estimate`.
+    """
+    num, den = np.asarray(num, float), np.asarray(den, float)
+    n = len(num)
+
+    def ratio(a, b):
+        return float(a.sum() / b.sum()) if b.sum() > 0 else float("nan")
+
+    value = ratio(num, den)
+    if n < 2:
+        return Estimate(value, np.nan, np.nan, league, (np.nan, np.nan), n, "Low")
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, n, size=(n_boot, n))
+    nb, db = num[idx].sum(1), den[idx].sum(1)
+    boots = np.divide(nb, db, out=np.full(n_boot, np.nan), where=db > 0)
+    boots = boots[np.isfinite(boots)]
+    lo, hi = (np.percentile(boots, [5, 95]) if len(boots) else (np.nan, np.nan))
+    halves = (ratio(num[0::2], den[0::2]), ratio(num[1::2], den[1::2]))
+    return Estimate(value, float(lo), float(hi), league, halves, n,
+                    _label(value, lo, hi, league, halves))
+
+
 def _label(value, lo, hi, league, halves) -> str:
     if league is None or not np.isfinite(league):
         # Nothing to compare against: judge on precision and agreement alone.

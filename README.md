@@ -1,35 +1,100 @@
 # football_graph_predictor — PitchGraph
 
-A grounded football analyst built on open data and graph theory. A coach asks a
-question and gets an answer backed by numbers, pitch diagrams and the exact
-moments as evidence, with stated confidence and no invented statistics.
+Scouting football teams with graph theory, on open data. Every team is a **flow
+graph**: pitch regions are the nodes, and from each one a team moves the ball
+along an edge, shoots, or loses it. Solving that absorbing Markov chain gives the
+chance a possession ends in a goal, and operations on the graph answer the
+questions a coach actually asks:
+
+| Question | Graph operation |
+|---|---|
+| **How do they play, and who plays like them?** | Their flow graph against the league's; a fingerprint distance between graphs |
+| **How do we stop them?** | Remove a link or a player from the graph and re-solve: the threat that disappears, as a range from "they adapt" to "they lose the ball" |
+| **Where are they vulnerable?** | The same planner on what opponents do against them |
+| **What happens when A plays B?** | A's habits with B's leakiness applied edge by edge |
+
+The results are browsable in the **PitchGraph Library**: search any team,
+open its report, plan a matchup, or explore the style map.
 
 > **Data source: StatsBomb.** This project uses
 > [StatsBomb Open Data](https://github.com/statsbomb/open-data). Any published
 > analysis derived from it must credit StatsBomb and display their logo, per the
 > open-data licence.
 
-## Roadmap
+## What has been validated
 
-| # | Ships | Graph theory at work |
+Every claim the Library makes is tested, and the results are reported whichever
+way they came out. The numbers below come from leagues streamed during
+development; `notebooks/02_library.ipynb` reruns everything on all 12 complete
+league seasons and writes the results into the Library's Method page.
+
+**Style is real.** A team's flow graph from half its matches identifies its own
+other half among every team in the league:
+
+| League | Identified | Chance |
 |---|---|---|
-| 1 | **Opposition report** for any of the 178 teams with 15+ matches | absorbing-Markov possession value over a zone graph; value-weighted passing and co-pressing graphs; route mining |
-| 2 | Tracking-based GNN value model (Colab); off-ball runs and pressing | spatio-temporal graph neural network over players |
-| 3 | Ask-anything: Claude agent answering with evidence from the modules | modules become tools |
-| 4 | Match review, player evaluation, set-piece what-ifs, matchup engine | same model, new heads |
+| Premier League 2015/16 | 90% | 5% |
+| Serie A 2015/16 | 95% | 5% |
+| Liga F 2023/24 | 75% | 6% |
+| WSL 2018/19 | 64% | 9% |
+| WSL 2020/21 | 50% | 8% |
 
-## Data
+The grid behind this was chosen on evidence: a 12×8 grid fitted noise (25%
+re-identification, almost no held-out gain over the league average), while a
+coarse grid aligned with the five tactical lanes generalises. How strongly each
+team is pulled toward its league (κ) is chosen by held-out likelihood, never by
+the re-identification test, and came out at 1000 in every league.
 
-All of the open data is used, not just one tournament:
+**Matchups change *where* a team attacks, not *how much*.** Each match is
+predicted from the other matches only. Ranges are 90% intervals over matches;
+positive means the matchup model beat the comparison:
 
-| Source | Coverage |
-|---|---|
-| StatsBomb events | 3,961 matches, 80 competition-seasons (men's and women's), including complete 2015/16 PL, La Liga, Serie A and Ligue 1 seasons and several complete women's leagues |
-| StatsBomb 360 | 477 matches with freeze-frames |
-| Gradient Sports (PFF) tracking | World Cup 2022, all 64 matches (free, by request) |
-| IDSSE / SkillCorner / Metrica | 7 + 10 + 3 tracking matches |
+| League | Lanes: matchup vs own habits | Threat volume: matchup vs strength alone |
+|---|---|---|
+| Premier League 15/16 | +0.0014 to +0.0027 | −0.0008 to +0.0021 |
+| Serie A 15/16 | +0.0007 to +0.0021 | −0.0034 to −0.0001 |
+| WSL 20/21 | +0.0002 to +0.0028 | −0.0051 to +0.0002 |
+| WSL 18/19 | +0.0012 to +0.0029 | −0.0086 to +0.0002 |
+| Liga F 23/24 | −0.0004 to +0.0013 | −0.0023 to +0.0050 |
 
-### No data is stored on the local machine
+How much threat a team creates is attack strength × how much the defence
+concedes; the edge-by-edge interaction adds nothing to that. Where it comes from
+does shift with the opponent's defensive pattern, modestly but consistently. This
+is the first properly powered test of the idea the project started from (v1's
+test had 32 teams and found nothing). The Library's matchup view follows the
+result: lanes from the matchup model, volume from strength alone.
+
+**Player effects are weak.** Removing a player from the player-level flow graph
+predicts how much threat the team loses without them. Across 781 real absences
+(Premier League and Serie A 2015/16, opponent-adjusted), predicted and observed
+drops agree only weakly: r = 0.08, p = 0.01. The Library presents player levers
+as "who the threat runs through", not as forecasts.
+
+**The possession value model** (absorbing chain over a 16×12 grid, fitted on all
+competitions) ranks situations as well as the direct per-zone estimate when data
+is plentiful, and better when it is thin (correlation 0.219 vs 0.189 on 5
+training matches), across men's and women's leagues held out whole.
+
+## Using it
+
+**The Library** (Colab + Drive): run `notebooks/01_ingest.ipynb` once to build the
+data lake, then `notebooks/02_library.ipynb` to validate and build the Library.
+
+**From the command line**, by team name:
+
+```bash
+pip install -e ".[dev]"
+pitchgraph teams --search "arsenal"
+pitchgraph report "Leicester City" 2015/16 --stream --out leicester.html
+pitchgraph matchup "Arsenal" "Leicester City" 2015/16 --stream
+```
+
+`--stream` analyses one competition-season in memory; without it, commands use
+the Drive lake (needs `PITCHGRAPH_DATA`). A full season takes about 30 seconds.
+
+**Tests:** `python -m pytest tests -q` (synthetic fixtures; no data needed).
+
+## No data is stored on the local machine
 
 The repo holds code only. Data lives on **Google Drive** and heavy work runs in
 **Colab**. One setting names the data root:
@@ -40,152 +105,72 @@ PITCHGRAPH_DATA=E:/pitchgraph                        # a USB drive, later
 ```
 
 With it unset, nothing is written anywhere: downloads stay in memory, and anything
-that needs the lake refuses to run. `tests/test_storage.py` enforces this, and
-`.gitignore` blocks data files from being committed.
-
-The lake is ~1.7 GB of Parquet (one file per competition-season per table:
-`matches`, `events`, `frames`, `areas`, `lineups`). Raw JSON is streamed straight
-to Parquet and never saved.
-
-## Running
-
-**Build the lake (Colab):** open `notebooks/01_ingest.ipynb` in Colab and run it
-top to bottom. It mounts Drive, clones this repo, and ingests everything. Re-run
-it if the session drops; completed seasons are skipped.
-
-**Develop locally (code only):**
-
-```bash
-pip install -e ".[dev]"
-python -m pytest tests -q        # synthetic fixtures, no real data needed
-```
+that needs the lake refuses to run (`tests/test_storage.py` enforces this). The
+lake is ~1.7 GB of Parquet; raw JSON is streamed straight into it and never saved.
 
 ## Layout
 
 ```
 src/pitchgraph/
-  config.py            where data lives (nowhere locally by default)
-  data/statsbomb.py    open-data reader: UTF-8, memory-only unless told otherwise
-  data/ingest.py       stream -> Parquet lake, resumable
-  data/frames.py       360 frames -> normalised snapshots (event-team flip, censoring)
-  geometry/            fitted pass/shot models, defensive-shape features (v1)
-  legacy/              v1 routing and ability code, kept as documented negative results
-scripts/ingest.py      CLI for the lake build
-scripts/legacy/        v1 experiments
-notebooks/             Colab notebooks
+  config.py              where data lives (nowhere locally by default)
+  cli.py                 pitchgraph teams | report | matchup | library
+  data/                  open-data reader, lake ingest, 360 frames, possessions
+  value/                 absorbing-Markov possession value + its evaluation
+  chains/                team flow graphs: grid, counts, shrinkage, denial,
+                         fingerprint, matchup, player chains, validation suite
+  analysis/              per-match ledger, league-relative claims with bootstrap
+                         confidence, report sections, Season (one league, analysed once)
+  library/               JSON build, the browsable app, report packaging
+  graphs/                descriptive graphs: passing, co-pressing, routes
+  geometry/              v1: fitted pass/shot models, defensive-shape features
+  legacy/                v1 routing and ability code (documented negative results)
+notebooks/               01_ingest, 02_library (Colab)
 tests/
 ```
 
-## v1 findings (vulnerability engine)
+## Roadmap
 
-Reported honestly, including the parts that did not work — two of the three
-headline ideas failed validation, and that is the most useful output to date.
+1. **PitchGraph v3** (this release): flow graphs, the denial planner, matchups,
+   the Library.
+2. **TurningPoint**: when did a match change, what changed, and what probably
+   caused it. Online change-point detection on each team's flow graph, validated
+   against ~2,000 genuine formation changes (StatsBomb Tactical Shift events).
+3. **RoleFit**: who plays a player's role, and who could do it in another
+   system. Validated by recognising the same player across club and country.
 
-### What worked
+## History
 
-**Geometric vulnerability features carry real signal.** A vector describing the
-defensive shape (nearest defender, lateral seam width, lane pressure to goal,
-defenders goal-side, line height, between-lines gap) lifts shot prediction over a
-ball-position baseline:
+**v1 (vulnerability engine, StatsBomb 360).** Geometric features of the defensive
+shape lifted shot prediction over ball position (AUC 0.793 → 0.807, grouped by
+match), and the fitted pass model reached AUC 0.882 on 20,354 passes. Two headline
+ideas failed. Min-cost routing through a "resistance graph" predicted nothing beyond
+ball position (residual AUC 0.493). The vulnerability × ability interaction test
+on the 2022 World Cup found nothing once significance used the correct
+team-level null: an apparent p = 0.016 became p = 0.085, because 95,160 snapshots
+carry only 32 independent team profiles.
 
-| model | AUC (grouped 5-fold CV by match) |
-|---|---|
-| ball position only | 0.7931 |
-| geometry only | 0.7957 |
-| position + geometry | **0.8071** (+0.0140) |
+**v2 (opposition report).** League-relative claims with bootstrap-by-match
+confidence. Bugs caught by tests and checks along the way: a null-unsafe filter
+that silently dropped 92% of passes; bootstrap intervals that excluded their own
+estimate, because resampled matches were not relabelled; and a build-up success
+rate inflated by only counting possessions that had already left the defensive
+third. v3's ledger fixes the last one, so v2's published Leicester figure (53.8%)
+was too high.
 
-Cross-validation is grouped by match, so no match appears in both train and test.
-The gain is real but modest.
-
-**The fitted sub-models are sound.** Pass completion is a logistic model over
-lane pressure, reception pressure and length, fit on 20,354 labelled passes that
-carry a 360 frame: **AUC 0.882**, Brier 0.102 against a 0.145 baseline. Observed
-completion falls monotonically from 95% at low lane pressure to 32% at high. Shot
-value is fit against 654 real StatsBomb xG values (corr 0.72).
-
-### What failed
-
-**1. The resistance-graph routing model — the original headline idea.**
-Min-cost routing from the ball to goal through a zone graph, with edge costs of
-`-log P(movement succeeds)`. After removing ball position, its residual predicted
-shots at **AUC 0.493 — chance** — and adding it to a positional baseline made
-predictions *worse* (0.677 → 0.657). Collapsing a defensive shape into one best
-route discards the structure and mostly restates where the ball is. Three direct
-geometric features beat the entire routing apparatus.
-
-The code remains in `routes.py` and `resistance.py` because the underlying pass
-and shot models are reused, but the routed threat is not a product measure.
-
-**2. The interaction thesis — the experiment that was meant to decide everything.**
-The claim was that a vulnerability should be dangerous *in proportion* to whether
-the attacking team can exploit it (a high line hurts teams that run in behind).
-Across all 64 World Cup 2022 matches and 95,160 snapshots, **none of six
-interactions was significant**:
-
-| interaction | coef | perm p |
-|---|---|---|
-| high line × runs in behind | −0.0442 | 0.367 |
-| space behind × runs in behind | +0.0510 | 0.268 |
-| lateral seam × runs in behind | +0.0448 | 0.085 |
-| ball-side overload × switching | −0.0024 | 0.910 |
-| stretched block × crossing | +0.0313 | 0.217 |
-| between-lines gap × directness | +0.0145 | 0.445 |
-
-Significance comes from a **team-level permutation null**, and that choice is the
-whole result. Ability varies across 32 teams, not 95,160 snapshots. An earlier
-run treated snapshots as independent and reported lateral-seam × runs-in-behind
-at p=0.0156, apparently supporting the thesis. Under the correct null the same
-association is p=0.085. The "significant" finding was an artefact of inflating
-the effective sample size by three orders of magnitude.
-
-**This is "not detected", not "shown to be absent."** With 32 units the test has
-low power. The most likely reasons for the null are aggregation and noise rather
-than the idea being wrong:
-
-- team-level ability averages 11 players, most of whom do not have the trait —
-  the effect, if real, probably lives at the *player* level;
-- World Cup teams play 3–7 matches, so leave-one-out profiles are very noisy, and
-  measurement error attenuates interactions toward zero;
-- "shot within 10s" is a coarse outcome dominated by field position.
-
-**Recommended next step:** rerun at player level on a league season with 360
-coverage (La Liga 2020/21, Ligue 1 2021/22 or 2022/23, Bundesliga 2023/24). Far
-more units, repeated players, and much less profile noise than a 64-match
-tournament with 32 teams.
-
----
-
-### Data constraints v1 uncovered
-
-Verified against the data, not assumed:
-
-1. **Freeze-frame players are anonymous** — only `teammate` / `actor` / `keeper` /
-   `location`, no identity. Frames therefore cannot be linked into trajectories,
-   so **shape is measurable, motion is not**: no velocity, no run timing.
-2. **Coordinates are relative to the *event* team**, which always attacks toward
-   x=120. About **19% of events** are made by the team out of possession
-   (Pressure, Clearance, Block), so their frames are mirrored with respect to the
-   attack. Everything is normalised so the attacking team attacks toward x=120
-   and the defending goal is always at (120, 40). Missing this silently corrupts
-   a fifth of the data; `tests/test_frames.py` guards it.
-3. **Censoring is structured, not random.** Mean 16.7 of 22 players visible, and
-   **zero of 3,683 frames** in the World Cup final contained all 22. Missingness
-   follows the broadcast camera, so `visible_area` is applied as a mask and
-   anything outside it is *unobserved*, never *empty*. Favourably, the camera
-   follows the ball: with the ball in the attacking third, mean 9.2 opponents are
-   visible and 94% of frames show ≥6 defenders in their own third.
-4. **`play_pattern` labels a possession's origin, not the event** — naive
-   set-piece exclusion would wrongly discard ~25% of open play.
-5. Files are UTF-8; Python on Windows defaults to cp1252, so every read is
-   explicit.
+**Data facts that shaped the design** (verified against the data): 360 freeze-frame
+players are anonymous, so shape is measurable but motion is not. Coordinates are
+relative to the *event* team, and ~19% of events are made by the team out of
+possession, so frames must be mirrored (`tests/test_frames.py`). Freeze-frame
+visibility follows the broadcast camera, so off-camera means unobserved, not
+empty. `play_pattern` labels how a possession began, not what an event is.
 
 ## Method commitments
 
-- **Vulnerability is defined geometrically, never from outcomes.** Defining it by
-  what led to goals would condition on success and hide exactly what matters:
-  gaps that exist but which a particular opponent could not use. Outcomes are
-  only ever a secondary check. `test_features_are_outcome_independent` enforces it.
-- **Detection and attribution stay separate.** Geometry is defensible; any causal
-  story is a ranked hypothesis, never an assertion.
-- **Every number needs a reference distribution.** The typology thresholds are
-  percentiles of a reference population, not absolute constants.
+- **Every number is compared with its league.** Claims are ranked against every
+  team in the same competition-season, with 90% intervals from resampling whole
+  matches and a confidence label from interval and split-half agreement.
+- **Predictions are made only from data the prediction could have had.** Halves
+  are disjoint; matchups, absences and shrinkage weights are leave-one-match-out.
+- **Bounds instead of point guesses when behaviour is unknown.** Denials report
+  "they adapt" to "they lose the ball", because the data cannot say which.
+- **Negative results are reported as plainly as positive ones.**

@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 import polars as pl
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -46,3 +47,20 @@ def test_no_difference_from_league_is_low_confidence():
 def test_single_match_is_always_low_confidence():
     e = estimate(_frame([[1.0, 2.0]]), per_match_total, league=0.1)
     assert e.confidence == "Low"
+
+
+def test_fast_ratio_path_agrees_with_the_generic_bootstrap():
+    """The ledger fast path must give the same answer as resampling frames."""
+    from pitchgraph.analysis.reliability import estimate_ratio
+    rng = np.random.default_rng(3)
+    num = rng.poisson(20, 38).astype(float)
+    den = num + rng.poisson(30, 38)
+    f = pl.DataFrame({"match_id": np.repeat(np.arange(38), 2),
+                      "num": np.column_stack([num, np.zeros(38)]).ravel(),
+                      "den": np.column_stack([den, np.zeros(38)]).ravel()})
+    slow = estimate(f, lambda g: g["num"].sum() / g["den"].sum(), league=0.35, n_boot=2000)
+    fast = estimate_ratio(num, den, league=0.35, n_boot=2000)
+    assert fast.value == pytest.approx(slow.value)
+    assert fast.halves == pytest.approx(slow.halves)
+    assert fast.lo == pytest.approx(slow.lo, abs=0.01) and fast.hi == pytest.approx(slow.hi, abs=0.01)
+    assert fast.confidence == slow.confidence
