@@ -41,8 +41,13 @@ CORE_KEYS = {
     "id", "index", "period", "timestamp", "minute", "second", "type",
     "possession", "possession_team", "play_pattern", "team", "player",
     "position", "location", "duration", "under_pressure", "counterpress",
-    "related_events", "tactics", "off_camera", "out",
+    "related_events", "off_camera", "out",
 }
+# `tactics` (a Tactical Shift/Starting XI event's formation + lineup) is
+# deliberately NOT in CORE_KEYS: that set controls what's excluded from
+# `extra`, and tactics has no column of its own, so excluding it here
+# would silently drop formation data -- found when TurningPoint's
+# attribute.py went looking for it and it wasn't there.
 
 _local = threading.local()
 
@@ -254,11 +259,12 @@ def ingest_season(comp: dict, lake: Path, workers: int = 8, log=print) -> dict:
 
 
 def ingest_all(lake: Path | None = None, only: list[str] | None = None,
-               workers: int = 8, log=print) -> dict:
+               workers: int = 8, force: bool = False, log=print) -> dict:
     """Ingest every competition-season not already in the manifest.
 
     `only` restricts to competition-season keys like "2_27" (Premier League
-    2015/16). Safe to re-run: completed seasons are skipped.
+    2015/16). Safe to re-run: completed seasons are skipped, unless `force`
+    (e.g. a schema change means every match needs redownloading).
     """
     lake = lake or lake_dir()
     lake.mkdir(parents=True, exist_ok=True)
@@ -273,7 +279,7 @@ def ingest_all(lake: Path | None = None, only: list[str] | None = None,
         key = _season_key(comp)
         if only and key not in only:
             continue
-        if manifest.get(key, {}).get("done"):
+        if manifest.get(key, {}).get("done") and not force:
             continue
         log(f"{comp['competition_name']} {comp['season_name']} ({key})")
         stats = ingest_season(comp, lake, workers=workers, log=log)

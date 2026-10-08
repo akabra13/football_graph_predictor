@@ -25,6 +25,11 @@ on:
         description: "Concurrent download workers"
         required: false
         default: "8"
+      force:
+        description: "Redownload and overwrite already-done competition-seasons (e.g. after a schema change)"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   ingest:
@@ -67,8 +72,11 @@ jobs:
           PITCHGRAPH_DATA: /home/runner/pitchgraph
           ONLY: ${{ inputs.only }}
           WORKERS: ${{ inputs.workers }}
+          FORCE: ${{ inputs.force }}
         run: |
-          python scripts/ingest.py ${ONLY:+--only $ONLY} --workers "$WORKERS"
+          FORCE_FLAG=""
+          [ "$FORCE" = "true" ] && FORCE_FLAG="--force"
+          python scripts/ingest.py ${ONLY:+--only $ONLY} --workers "$WORKERS" $FORCE_FLAG
 
       - name: Push lake to Drive
         if: always()

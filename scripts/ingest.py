@@ -5,6 +5,7 @@ USB drive). Refuses to run otherwise, so nothing is ever written to the laptop.
 
     python scripts/ingest.py                 # everything, resumable
     python scripts/ingest.py --only 43_106   # one competition-season
+    python scripts/ingest.py --force         # redownload everything (e.g. after a schema change)
 """
 import argparse
 import sys
@@ -19,10 +20,12 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--only", nargs="*", help="competition-season keys, e.g. 43_106")
     ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--force", action="store_true",
+                     help="redownload and overwrite already-done competition-seasons")
     args = ap.parse_args()
     lake = lake_dir()
     print(f"lake: {lake}")
-    manifest = ingest_all(lake, only=args.only, workers=args.workers)
+    manifest = ingest_all(lake, only=args.only, workers=args.workers, force=args.force)
     done = [v for v in manifest.values() if v.get("done")]
     print(f"\n{len(done)} competition-seasons, {sum(v['matches'] for v in done)} matches, "
           f"{sum(v.get('events', 0) for v in done):,} events in the lake")

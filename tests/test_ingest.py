@@ -123,6 +123,29 @@ def test_ingest_is_resumable(tmp_path, monkeypatch):
     assert len(FakeSB.calls) == first, "completed seasons must be skipped"
 
 
+def test_force_redownloads_already_done_seasons(tmp_path, monkeypatch):
+    _patch(monkeypatch)
+    lake = tmp_path / "lake"
+    ingest.ingest_all(lake=lake, workers=1, log=lambda *_: None)
+    first = len(FakeSB.calls)
+    ingest.ingest_all(lake=lake, workers=1, force=True, log=lambda *_: None)
+    assert len(FakeSB.calls) == 2 * first, "force must redownload completed seasons too"
+
+
+def test_tactics_payload_survives_into_extra():
+    """tactics (a Tactical Shift/Starting XI event's formation + lineup) has
+    no column of its own, so it must land in `extra` rather than being
+    silently dropped -- found missing when turningpoint's attribute.py went
+    looking for formation data that wasn't there."""
+    ev = {"id": "x-1", "index": 1, "period": 1, "timestamp": "00:01:00.000",
+          "minute": 1, "second": 0, "type": {"name": "Tactical Shift"},
+          "team": {"id": 10, "name": "Atlético"},
+          "tactics": {"formation": 433, "lineup": [{"player": {"id": 7}, "position": {"id": 1}}]}}
+    df = ingest.flatten_events([ev], 1, set())
+    extra = json.loads(df.row(0, named=True)["extra"])
+    assert extra["tactics"]["formation"] == 433
+
+
 def test_one_bad_match_does_not_abort_the_season(tmp_path, monkeypatch):
     """A single match whose download raises (malformed response, dropped
     connection, ...) must not lose the rest of the season -- this is what
