@@ -1,0 +1,57 @@
+name: Validate and build the PitchGraph Library on Drive
+
+# Runs scripts/build_library.py on GitHub's runner instead of a Colab
+# session, pulling/pushing the lake and library to Google Drive via
+# rclone before and after. Needs the lake already built by the ingest
+# workflow. Same auth setup as ingest.yml -- see
+# docs/github_actions_drive_setup.md.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pitchgraph
+        run: pip install -e .
+
+      - name: Install rclone
+        run: curl https://rclone.org/install.sh | sudo bash
+
+      - name: Configure rclone
+        env:
+          GDRIVE_OAUTH_TOKEN: ${{ secrets.GDRIVE_OAUTH_TOKEN }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf <<EOF
+          [gdrive]
+          type = drive
+          scope = drive
+          token = ${GDRIVE_OAUTH_TOKEN}
+          root_folder_id = ${GDRIVE_FOLDER_ID}
+          EOF
+
+      - name: Pull lake + existing library from Drive (resume support)
+        run: |
+          mkdir -p "$HOME/pitchgraph"
+          rclone copy gdrive: "$HOME/pitchgraph" --fast-list -v
+
+      - name: Build
+        env:
+          PITCHGRAPH_DATA: /home/runner/pitchgraph
+        run: |
+          python scripts/build_library.py
+
+      - name: Push library to Drive
+        if: always()
+        run: |
+          rclone copy "$HOME/pitchgraph" gdrive: --fast-list -v
