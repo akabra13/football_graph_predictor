@@ -1,17 +1,18 @@
 name: Ingest StatsBomb lake to Drive
 
 # Runs the existing scripts/ingest.py on GitHub's runner instead of the
-# laptop, pulling/pushing the lake to Google Drive via rclone + a service
-# account before and after -- the same "data goes to Drive, never the
-# local machine" model the Colab notebook uses, just triggered without a
-# browser. Explicit copy (not a FUSE mount) so the push step is a plain
-# synchronous command rather than relying on unmount to flush cached
-# writes.
+# laptop, pulling/pushing the lake to Google Drive via rclone before and
+# after -- the same "data goes to Drive, never the local machine" model
+# the Colab notebook uses, just triggered without a browser. Explicit
+# copy (not a FUSE mount) so the push step is a plain synchronous
+# command rather than relying on unmount to flush cached writes.
 #
-# One-time setup needed before this can run: see
-# docs/github_actions_drive_setup.md for creating the service account,
-# sharing the Drive folder with it, and adding the two repo secrets this
-# workflow reads (GDRIVE_SA_KEY_JSON, GDRIVE_FOLDER_ID).
+# Authenticates as the user (OAuth, via `rclone authorize "drive"`), not
+# a service account: service accounts have no Drive storage quota of
+# their own, so writes into a folder merely *shared* with one (rather
+# than a Shared Drive, a Workspace-only feature) fail with
+# storageQuotaExceeded. One-time setup: see
+# docs/github_actions_drive_setup.md.
 
 on:
   workflow_dispatch:
@@ -42,18 +43,17 @@ jobs:
       - name: Install rclone
         run: curl https://rclone.org/install.sh | sudo bash
 
-      - name: Configure rclone service account
+      - name: Configure rclone
         env:
-          GDRIVE_SA_KEY_JSON: ${{ secrets.GDRIVE_SA_KEY_JSON }}
+          GDRIVE_OAUTH_TOKEN: ${{ secrets.GDRIVE_OAUTH_TOKEN }}
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
         run: |
           mkdir -p ~/.config/rclone
-          printf '%s' "$GDRIVE_SA_KEY_JSON" > /tmp/sa.json
           cat > ~/.config/rclone/rclone.conf <<EOF
           [gdrive]
           type = drive
           scope = drive
-          service_account_file = /tmp/sa.json
+          token = ${GDRIVE_OAUTH_TOKEN}
           root_folder_id = ${GDRIVE_FOLDER_ID}
           EOF
 

@@ -3,40 +3,41 @@
 This lets the `.github/workflows/ingest.yml` workflow run the ingest on
 GitHub's servers and write straight to your Google Drive, so Claude can
 trigger it with `gh workflow run` instead of you clicking through Colab.
-Your laptop is never involved.
+Your laptop is never involved in the actual ingest.
 
-## 1. Create a Google Cloud service account
+Authenticates as *you* (OAuth), not a service account: service accounts
+have no Drive storage quota of their own, so writes into a folder
+merely shared with one fail with `storageQuotaExceeded` unless it's a
+Shared Drive, which needs a paid Google Workspace plan.
 
-1. Go to console.cloud.google.com, create a project (or reuse one) — name
-   doesn't matter, e.g. "pitchgraph-ci".
-2. APIs & Services -> Library -> enable **Google Drive API**.
-3. APIs & Services -> Credentials -> Create Credentials -> **Service account**.
-   Name it e.g. `pitchgraph-ingest`. No roles needed, no user access needed.
-4. Open the new service account -> Keys -> Add key -> Create new key -> JSON.
-   This downloads a `.json` file — keep it private, it's a credential.
-5. Note the service account's email address (looks like
-   `pitchgraph-ingest@your-project.iam.gserviceaccount.com`).
+## 1. Create the Drive folder
 
-## 2. Create and share a Drive folder
+In your own Google Drive, create a folder named `pitchgraph` (top-level,
+in "My Drive") if it doesn't already exist. Open it and copy its ID from
+the URL: `drive.google.com/drive/folders/<THIS_PART_IS_THE_ID>`.
 
-Service accounts don't have a personal "My Drive", so the workflow needs
-a folder *you* own, shared with it.
+## 2. Authorize rclone as yourself
 
-1. In your own Google Drive, create a folder named `pitchgraph` (if it
-   doesn't already exist).
-2. Right-click it -> Share -> add the service account's email from step
-   1.5, give it **Editor** access.
-3. Open the folder and copy its ID from the URL:
-   `drive.google.com/drive/folders/<THIS_PART_IS_THE_ID>`.
+rclone ships with its own already-verified Google OAuth app, so no GCP
+project or credentials need creating.
+
+1. Install rclone (`winget install Rclone.Rclone` on Windows).
+2. In a terminal: `rclone authorize "drive"`.
+3. It opens your browser — sign in as the account that owns the
+   `pitchgraph` folder, approve access.
+4. It prints a token blob back in the terminal, e.g.
+   `{"access_token":"...","token_type":"Bearer","refresh_token":"...","expiry":"..."}`.
+   Keep this private, it's a credential — only the long-lived
+   `refresh_token` inside it actually matters; the `access_token` goes
+   stale within an hour regardless.
 
 ## 3. Add two secrets to the GitHub repo
 
 In github.com/akabra13/football_graph_predictor -> Settings -> Secrets
 and variables -> Actions -> New repository secret:
 
-- `GDRIVE_SA_KEY_JSON` — paste the *entire contents* of the JSON key file
-  from step 1.4.
-- `GDRIVE_FOLDER_ID` — the folder ID from step 2.3.
+- `GDRIVE_OAUTH_TOKEN` — paste the entire token blob from step 2.4.
+- `GDRIVE_FOLDER_ID` — the folder ID from step 1.
 
 ## 4. Done
 
@@ -44,3 +45,8 @@ Once both secrets exist, tell Claude -- it can run
 `gh workflow run ingest.yml` (optionally with `-f only="43_106"` to test
 on one competition-season first) and check progress with
 `gh run watch`, without any further action from you.
+
+If the workflow ever starts failing with an auth error, the OAuth token
+has likely gone stale (Google access tokens expire; rclone normally
+refreshes them automatically using the `refresh_token`, but if that's
+ever revoked, re-run step 2 and update the `GDRIVE_OAUTH_TOKEN` secret).
