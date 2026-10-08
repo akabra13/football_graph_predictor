@@ -121,3 +121,28 @@ def test_ingest_is_resumable(tmp_path, monkeypatch):
     first = len(FakeSB.calls)
     ingest.ingest_all(lake=lake, workers=1, log=lambda *_: None)
     assert len(FakeSB.calls) == first, "completed seasons must be skipped"
+
+
+def test_one_bad_match_does_not_abort_the_season(tmp_path, monkeypatch):
+    """A single match whose download raises (malformed response, dropped
+    connection, ...) must not lose the rest of the season -- this is what
+    took down a multi-hour GitHub Actions ingest run over one bad 360
+    frames file."""
+    _patch(monkeypatch)
+
+    def flaky_events(self, mid):
+        if mid == 101:
+            raise ValueError("Expecting ',' delimiter: line 92794 column 3")
+        return _events(mid)
+
+    monkeypatch.setattr(FakeSB, "events", flaky_events)
+
+    lake = tmp_path / "lake"
+    manifest = ingest.ingest_all(lake=lake, workers=2, log=lambda *_: None)
+
+    key = "1_2"
+    assert manifest[key]["done"] is True
+    assert manifest[key]["failed_matches"] == [101]
+    ev = pl.read_parquet(lake / "events" / f"{key}.parquet")
+    assert ev.height == 3  # only match 100's events, match 101 skipped
+    assert set(ev["match_id"]) == {100}

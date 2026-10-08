@@ -26,7 +26,7 @@ import json
 import os
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import polars as pl
@@ -214,12 +214,27 @@ def _save_manifest(lake: Path, manifest: dict):
 
 
 def ingest_season(comp: dict, lake: Path, workers: int = 8, log=print) -> dict:
-    """Ingest one competition-season and write its five tables."""
+    """Ingest one competition-season and write its five tables.
+
+    A single match whose download fails (a malformed response from the
+    source, a dropped connection, ...) is skipped rather than aborting the
+    whole season -- and with many competition-seasons queued behind this one
+    in `ingest_all`, aborting the season would abort everything after it too.
+    """
     matches = StatsBomb(memory_items=0).matches(comp["competition_id"], comp["season_id"])
     parts: dict[str, list] = {t: [] for t in TABLES}
+    failed = []
     t0 = time.time()
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        for done, res in enumerate(pool.map(lambda m: ingest_match(m, comp), matches), 1):
+        futures = {pool.submit(ingest_match, m, comp): m for m in matches}
+        for done, fut in enumerate(as_completed(futures), 1):
+            m = futures[fut]
+            try:
+                res = fut.result()
+            except Exception as e:
+                failed.append(m["match_id"])
+                log(f"    WARNING: match {m['match_id']} failed, skipping: {e}")
+                continue
             for t, df in res.items():
                 parts[t].append(df)
             if done % 50 == 0:
@@ -228,6 +243,8 @@ def ingest_season(comp: dict, lake: Path, workers: int = 8, log=print) -> dict:
     key = _season_key(comp)
     stats = {"competition": comp["competition_name"], "season": comp["season_name"],
              "matches": len(matches), "seconds": round(time.time() - t0, 1)}
+    if failed:
+        stats["failed_matches"] = failed
     for t in TABLES:
         if parts[t]:
             df = pl.concat(parts[t], how="diagonal_relaxed")
