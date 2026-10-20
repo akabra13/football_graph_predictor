@@ -15,6 +15,11 @@ name: Ingest StatsBomb lake to Drive
 # docs/github_actions_drive_setup.md.
 
 on:
+  # Weekly: ingest only competition-seasons that StatsBomb added or updated since the last run
+  # (scripts/check_source.py). Cheap when nothing changed: only competitions.json and two small
+  # files are fetched.
+  schedule:
+    - cron: "0 3 * * 1"
   workflow_dispatch:
     inputs:
       only:
@@ -62,23 +67,48 @@ jobs:
           root_folder_id = ${GDRIVE_FOLDER_ID}
           EOF
 
+      - name: Check StatsBomb for new or updated competition-seasons
+        id: check
+        env:
+          PITCHGRAPH_DATA: /home/runner/pitchgraph
+        run: |
+          mkdir -p "$HOME/pitchgraph/lake"
+          rclone copy gdrive:lake "$HOME/pitchgraph/lake" --include "manifest.json" --include "source_state.json" -v
+          KEYS=$(python scripts/check_source.py)
+          if [ ! -f "$HOME/pitchgraph/lake/source_state.json" ]; then
+            # first run: record the current timestamps so later updates to existing seasons are detected
+            python scripts/check_source.py --write-state
+            rclone copy "$HOME/pitchgraph/lake/source_state.json" gdrive:lake -v
+          fi
+          echo "keys=$KEYS" >> "$GITHUB_OUTPUT"
+          echo "new or updated: ${KEYS:-none}"
+
       - name: Pull existing lake from Drive (resume support)
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.keys != ''
         run: |
           mkdir -p "$HOME/pitchgraph"
           rclone copy gdrive: "$HOME/pitchgraph" --fast-list -v
 
       - name: Ingest
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.keys != ''
         env:
           PITCHGRAPH_DATA: /home/runner/pitchgraph
           ONLY: ${{ inputs.only }}
-          WORKERS: ${{ inputs.workers }}
+          WORKERS: ${{ inputs.workers || '8' }}
           FORCE: ${{ inputs.force }}
+          SCHEDULED_KEYS: ${{ steps.check.outputs.keys }}
+          EVENT: ${{ github.event_name }}
         run: |
           FORCE_FLAG=""
           [ "$FORCE" = "true" ] && FORCE_FLAG="--force"
+          if [ "$EVENT" = "schedule" ]; then
+            # updated seasons must be re-downloaded, so force applies to exactly these keys
+            ONLY="$SCHEDULED_KEYS"; FORCE_FLAG="--force"
+          fi
           python scripts/ingest.py ${ONLY:+--only $ONLY} --workers "$WORKERS" $FORCE_FLAG
+          python scripts/check_source.py --write-state
 
       - name: Push lake to Drive
-        if: always()
+        if: always() && (github.event_name == 'workflow_dispatch' || steps.check.outputs.keys != '')
         run: |
           rclone copy "$HOME/pitchgraph" gdrive: --fast-list -v
