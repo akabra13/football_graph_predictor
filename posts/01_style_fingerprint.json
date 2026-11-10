@@ -1,0 +1,38 @@
+{
+ "id": "01_style_fingerprint",
+ "kind": "paired_bars",
+ "size": "wide",
+ "title": "A team's style is a fingerprint",
+ "subtitle": "Half a season of how a team moves the ball picks out its other half from the whole league",
+ "value_label": "picked the right team",
+ "base_label": "chance",
+ "rows": [
+  {
+   "label": "Serie A 2015/16",
+   "value": 0.95,
+   "base": 0.05
+  },
+  {
+   "label": "Premier League 2015/16",
+   "value": 0.9,
+   "base": 0.05
+  },
+  {
+   "label": "Liga F 2023/24",
+   "value": 0.75,
+   "base": 0.06
+  },
+  {
+   "label": "WSL 2018/19",
+   "value": 0.64,
+   "base": 0.09
+  },
+  {
+   "label": "WSL 2020/21",
+   "value": 0.5,
+   "base": 0.08
+  }
+ ],
+ "note": "Flow graph of 30 pitch zones per team, fitted on alternate matches; the other half matched by distance. Chance = 1 / number of teams.",
+ "caption": "Give me half of a team's season and I can tell you which team it is.\n\nI turned every team into a graph of how the ball moves between pitch zones. Fitted on one half of their matches, it picks out the same team from the other half 90-95% of the time in the 2015/16 Premier League and Serie A (chance: 5%).\n\nStyle isn't vibes. It's a fingerprint."
+}

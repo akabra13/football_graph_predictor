@@ -1,0 +1,26 @@
+{
+ "id": "03_back_three",
+ "kind": "interval_bars",
+ "size": "wide",
+ "title": "You can see a back three in event data",
+ "subtitle": "Telling a back three from a back four from where players touch the ball, in seasons the model never saw",
+ "base": 0.5,
+ "base_label": "coin flip",
+ "fmt": "{:.0%}",
+ "rows": [
+  {
+   "label": "Development seasons",
+   "value": 0.766,
+   "lo": 0.747,
+   "hi": 0.785
+  },
+  {
+   "label": "Held-out seasons (scored once)",
+   "value": 0.769,
+   "lo": 0.742,
+   "hi": 0.796
+  }
+ ],
+ "note": "Balanced accuracy, 95% CI by team. 14,401 segments of 10+ minutes; no team in both training and test. A 'back three' call is right about half the time (back threes are 1 in 5).",
+ "caption": "Can you tell a back three from a back four without tracking data, just from where each player touches the ball?\n\nYes, about 77% of the time, and it held up on seasons I locked away before starting (also 77%).\n\nWhat it can't do yet: say the minute a team switched."
+}

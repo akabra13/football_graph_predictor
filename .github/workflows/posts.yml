@@ -1,0 +1,45 @@
+name: Build post images
+
+# Renders posts/*.json to PNGs with the official StatsBomb logo (their
+# open-data licence asks for it on published analysis) and uploads them,
+# with captions.md, as a workflow artifact for review before posting.
+
+on:
+  workflow_dispatch:
+    inputs:
+      handle:
+        description: "Handle shown in the credit line, e.g. @yourname (blank = none)"
+        required: false
+        default: ""
+  push:
+    branches: [main]
+    paths: ["posts/**", "src/pitchgraph/figures/**"]
+
+jobs:
+  posts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pitchgraph
+        run: pip install -e .
+
+      - name: Download the StatsBomb logo
+        run: |
+          curl -fsSL -o "$HOME/statsbomb_logo.png" \
+            "https://raw.githubusercontent.com/statsbomb/open-data/master/img/SB%20-%20Icon%20Lockup%20-%20Colour%20positive.png"
+
+      - name: Render posts
+        env:
+          PITCHGRAPH_LOGO: /home/runner/statsbomb_logo.png
+          POST_HANDLE: ${{ inputs.handle }}
+        run: python scripts/build_posts.py --out out/posts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: posts
+          path: out/posts

@@ -1,0 +1,55 @@
+{
+ "id": "02_seven_attempts",
+ "kind": "dumbbell",
+ "size": "wide",
+ "title": "Seven ways to spot a formation change",
+ "subtitle": "Does each method react to a real formation change more than to a random moment? (AUC; 0.5 = chance)",
+ "value_label": "real change",
+ "control_label": "control (same formation)",
+ "bar": 0.6,
+ "bar_label": "pre-registered bar",
+ "xlim": [
+  0.47,
+  0.67
+ ],
+ "rows": [
+  {
+   "label": "Ball movement (zones)",
+   "value": 0.527,
+   "control": 0.499
+  },
+  {
+   "label": "Team shape (360 frames)",
+   "value": 0.505,
+   "control": 0.529
+  },
+  {
+   "label": "Pass geometry",
+   "value": 0.546,
+   "control": 0.505
+  },
+  {
+   "label": "Passing network",
+   "value": 0.535,
+   "control": 0.51
+  },
+  {
+   "label": "Shape topology",
+   "value": 0.523,
+   "control": 0.519
+  },
+  {
+   "label": "Each player's position",
+   "value": 0.625,
+   "control": 0.636
+  },
+  {
+   "label": "Back-line classifier",
+   "value": 0.604,
+   "control": 0.509,
+   "highlight": true
+  }
+ ],
+ "note": "StatsBomb open data, 80 competition-seasons. Bars fixed before each run. Only the last method reacts to the real change and not to the control; it still misses the bar.",
+ "caption": "I spent a month trying to detect formation changes from open event data. Seven methods, every test written down before running it.\n\nSix failed outright. One method (each player's position) looked great, until the control showed it fires on any tactical event, not just formation changes.\n\nThe last one is the first that reacts only to the real thing. Thread on what worked, what didn't, and why."
+}
