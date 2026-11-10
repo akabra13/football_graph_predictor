@@ -75,7 +75,7 @@ def finish(fig, path: str | Path, title: str, subtitle: str = "", note: str = ""
         fig.text(0.05, 0.875, textwrap.fill(subtitle, 110 if wide else 80),
                  fontsize=19, color=MUTED, va="top", linespacing=1.3)
     if note:
-        fig.text(0.05, 0.05, textwrap.fill(note, 150 if wide else 110),
+        fig.text(0.05, 0.05, textwrap.fill(note, 125 if wide else 85),
                  fontsize=13, color=MUTED, va="bottom", linespacing=1.4)
     handle = os.environ.get("POST_HANDLE", "")
     credit = "Data: StatsBomb Open Data" + (f"   ·   {handle}" if handle else "")
@@ -83,9 +83,9 @@ def finish(fig, path: str | Path, title: str, subtitle: str = "", note: str = ""
     logo = os.environ.get("PITCHGRAPH_LOGO")
     if logo and Path(logo).exists():
         img = plt.imread(logo)
-        h = 0.06
+        h = 0.045
         w = h * img.shape[1] / img.shape[0] * fig.get_figheight() / fig.get_figwidth()
-        lax = fig.add_axes([0.95 - w, 0.005, w, h])
+        lax = fig.add_axes([0.95 - w, 0.012, w, h])
         lax.imshow(img)
         lax.axis("off")
     path = Path(path)
