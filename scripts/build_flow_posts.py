@@ -56,8 +56,10 @@ if __name__ == "__main__":
             data = flow_data(season.attack[tid], season.league, usage)
             fill = {"team": spec.get("display", hit["team"]), "season_short": spec["season"],
                     **{k: data["links"][0][k] for k in ("from_label", "to_label", "lo", "hi")}}
+            specific = any(k["unusual"] for k in data["links"])
+            subtitle = spec.get("subtitle", "") if specific else spec.get("subtitle_generic", "")
             path = flow_map(data, out / f"{spec['id']}.png", spec["title"].format(**fill),
-                            spec.get("subtitle", ""), spec.get("note", ""))
+                            subtitle, spec.get("note", ""))
             (out / f"{spec['id']}.json").write_text(json.dumps(data, indent=1), encoding="utf-8")
             captions.append(f"## {spec['id']}\n\n{spec['caption'].format(**fill)}\n")
             print(f"rendered {path}  kappa={season.kappa}  teams={len(season.eligible)}")

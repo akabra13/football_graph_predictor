@@ -5,7 +5,8 @@
  "competition": "Premier League",
  "kind": "flow_map",
  "title": "How to stop {team} {season_short}",
- "subtitle": "Their strongest routes, and the three links whose loss costs them most",
+ "subtitle": "Routes they use more than the league, and the three links whose loss costs them most",
  "note": "Each team is a graph of 30 pitch zones. Cutting a link removes those moves; the range runs from 'they find another pass' to 'they lose the ball every time'. Model output, not yet tested against match results.",
- "caption": "How do you stop {team} {season_short}?\n\nI turned their season into a graph of how the ball moves between pitch zones, then removed one link at a time and re-solved it.\n\nThe link that costs them most: {from_label} → {to_label}. Cut it and their threat falls {lo:.0%} if they adapt, up to {hi:.0%} if they keep losing the ball there.\n\nThese are model ranges, not predictions I've tested against results yet."
+ "caption": "How do you stop {team} {season_short}?\n\nI turned their season into a graph of how the ball moves between pitch zones, then removed one link at a time and re-solved it.\n\nThe link that costs them most: {from_label} → {to_label}. Cut it and their threat falls {lo:.0%} if they adapt, up to {hi:.0%} if they keep losing the ball there.\n\nThese are model ranges, not predictions I've tested against results yet.",
+ "subtitle_generic": "Routes they use more than the league. No link matters more to them than to an average side"
 }

@@ -20,6 +20,7 @@ from pitchgraph.figures.style import ACCENT, ACCENT_2, DPI, GRID, INK, MUTED, SI
 REGION_X = [20.0, 60.0, 100.0]
 REGION_Y = [9.0, 24.0, 40.0, 56.0, 71.0]
 N_REGIONS = 15
+MIN_FLOW = 0.02      # moves per possession; rarer routes are not drawn
 
 
 def region_centre(r: int) -> tuple[float, float]:
@@ -36,7 +37,7 @@ def region_flow(chain: Chain) -> np.ndarray:
     return R
 
 
-def flow_data(chain: Chain, league: Chain, usage: np.ndarray, top_flows: int = 12,
+def flow_data(chain: Chain, league: Chain, usage: np.ndarray, top_flows: int = 8,
               top_links: int = 3) -> dict:
     """Numbers behind the image: zone shading (visit share vs league), the
     strongest region-to-region flows, and the planner's links to cut.
@@ -47,11 +48,16 @@ def flow_data(chain: Chain, league: Chain, usage: np.ndarray, top_flows: int = 1
     """
     v, lv = chain.visits(), league.visits()
     share, lshare = v / v.sum(), lv / lv.sum()
-    R = region_flow(chain)
+    # Routes are ranked by how much MORE the team uses them than the league
+    # does: raw volume is the same sideways circulation for every side.
+    R, L = region_flow(chain), region_flow(league)
     np.fill_diagonal(R, 0.0)
-    order = np.argsort(-R, axis=None)[:top_flows]
-    flows = [{"from": int(a), "to": int(b), "flow": float(R[a, b])}
-             for a, b in zip(*np.unravel_index(order, R.shape)) if R[a, b] > 0]
+    excess = np.where(R >= MIN_FLOW, R - L, -np.inf)
+    order = np.argsort(-excess, axis=None)[:top_flows]
+    flows = [{"from": int(a), "to": int(b), "flow": float(R[a, b]), "excess": float(R[a, b] - L[a, b]),
+              "vs_league": float(R[a, b] / L[a, b]) if L[a, b] > 0 else None}
+             for a, b in zip(*np.unravel_index(order, R.shape))
+             if np.isfinite(excess[a, b]) and excess[a, b] > 0]
 
     plan = denial.plan(chain, usage, reference=league, top=top_links)
     names = {denial.region_name(r): r for r in range(N_REGIONS)}
@@ -97,10 +103,10 @@ def flow_map(data: dict, out: str | Path, title: str, subtitle: str = "", note: 
     draw_pitch(ax, line="#CFC9BF")
 
     cut = {(k["from"], k["to"]) for k in data["links"]}
-    top = max(f["flow"] for f in data["flows"]) if data["flows"] else 1.0
+    top = max(f["excess"] for f in data["flows"]) if data["flows"] else 1.0
     for f in data["flows"]:
         if (f["from"], f["to"]) not in cut:
-            _arrow(ax, f["from"], f["to"], 1.5 + 6 * f["flow"] / top, INK, alpha=0.55)
+            _arrow(ax, f["from"], f["to"], 1.5 + 6 * f["excess"] / top, INK, alpha=0.55)
     for i, k in enumerate(data["links"]):
         _arrow(ax, k["from"], k["to"], 7 if i == 0 else 4.5, ACCENT, z=5)
         x, y = np.mean([region_centre(k["from"]), region_centre(k["to"])], axis=0)
@@ -115,7 +121,7 @@ def flow_map(data: dict, out: str | Path, title: str, subtitle: str = "", note: 
     side.set_ylim(0, 1)
     side.text(0, 0.97, "Cut this link, lose this much threat", fontsize=17, fontweight="bold",
               color=INK, va="top")
-    hi_max = max([k["hi"] for k in data["links"]] + [0.01])
+    hi_max = max([max(k["hi"], k["league_hi"]) for k in data["links"]] + [0.01])
     for i, k in enumerate(data["links"]):
         y = 0.80 - i * 0.27
         side.text(0.02, y, str(i + 1), fontsize=15, fontweight="bold", color="white", va="center", ha="center",
@@ -126,8 +132,12 @@ def flow_map(data: dict, out: str | Path, title: str, subtitle: str = "", note: 
         x0, x1 = 0.09 + 0.8 * lo / hi_max, 0.09 + 0.8 * k["hi"] / hi_max
         side.plot([0.09, 0.89], [y - 0.09] * 2, color=GRID, lw=8, solid_capstyle="round")
         side.plot([x0, x1], [y - 0.09] * 2, color=ACCENT, lw=8, solid_capstyle="round")
-        side.text(0.09, y - 0.145, "{:.0%} if they adapt  ·  {:.0%} if they lose it".format(lo, k["hi"]),
-                  fontsize=12.5, color=MUTED, va="center")
-    side.text(0, 0.0, "Blue zones: used more than the league average.\nDark arrows: their strongest routes.",
+        avg = 0.5 * (max(k["league_lo"], 0.0) + k["league_hi"])
+        lx = 0.09 + 0.8 * avg / hi_max
+        side.plot([lx, lx], [y - 0.115, y - 0.065], color=INK, lw=2.5, zorder=5)
+        side.text(0.09, y - 0.145, "{:.0%} to {:.0%} of their threat   (average team: {:.0%})".format(
+            lo, k["hi"], avg), fontsize=12.5, color=MUTED, va="center")
+    side.text(0, 0.0, "Range: 'they adapt' to 'they lose the ball'.  | = average team\n"
+              "Blue zones, dark arrows: used more than the league.",
               fontsize=12, color=MUTED, va="bottom", linespacing=1.4)
     return finish(fig, out, title, subtitle, note)
