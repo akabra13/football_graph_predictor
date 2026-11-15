@@ -20,7 +20,7 @@ from pitchgraph.figures.style import ACCENT, ACCENT_2, DPI, GRID, INK, MUTED, SI
 REGION_X = [20.0, 60.0, 100.0]
 REGION_Y = [9.0, 24.0, 40.0, 56.0, 71.0]
 N_REGIONS = 15
-MIN_FLOW = 0.02      # moves per possession; rarer routes are not drawn
+MIN_FLOW = 0.01      # share of the side's region-to-region moves; rarer routes are not drawn
 
 
 def region_centre(r: int) -> tuple[float, float]:
@@ -50,8 +50,12 @@ def flow_data(chain: Chain, league: Chain, usage: np.ndarray, top_flows: int = 8
     share, lshare = v / v.sum(), lv / lv.sum()
     # Routes are ranked by how much MORE the team uses them than the league
     # does: raw volume is the same sideways circulation for every side.
+    # Shares of each side's own moves, so a team that has little of the ball
+    # still shows which routes it prefers.
     R, L = region_flow(chain), region_flow(league)
     np.fill_diagonal(R, 0.0)
+    np.fill_diagonal(L, 0.0)
+    R, L = R / R.sum(), L / L.sum()
     excess = np.where(R >= MIN_FLOW, R - L, -np.inf)
     order = np.argsort(-excess, axis=None)[:top_flows]
     flows = [{"from": int(a), "to": int(b), "flow": float(R[a, b]), "excess": float(R[a, b] - L[a, b]),
@@ -137,7 +141,7 @@ def flow_map(data: dict, out: str | Path, title: str, subtitle: str = "", note: 
         side.plot([lx, lx], [y - 0.115, y - 0.065], color=INK, lw=2.5, zorder=5)
         side.text(0.09, y - 0.145, "{:.0%} to {:.0%} of their threat   (average team: {:.0%})".format(
             lo, k["hi"], avg), fontsize=12.5, color=MUTED, va="center")
-    side.text(0, 0.0, "Range: 'they adapt' to 'they lose the ball'.  | = average team\n"
+    side.text(0, 0.0, "Range: they adapt, to they lose the ball.  | average team\n"
               "Blue zones, dark arrows: used more than the league.",
               fontsize=12, color=MUTED, va="bottom", linespacing=1.4)
     return finish(fig, out, title, subtitle, note)
