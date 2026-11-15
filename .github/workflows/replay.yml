@@ -1,0 +1,46 @@
+name: Season replay
+
+# Game-by-game pre-match plans for one team over the second half of a season,
+# each built only from earlier matches and scored against what happened.
+# Streams the season from StatsBomb Open Data; no Drive access needed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      team:
+        description: "Team name"
+        required: true
+        default: "Leicester City"
+      season:
+        description: "Season, e.g. 2015/16"
+        required: true
+        default: "2015/16"
+      competition:
+        description: "Competition name"
+        required: true
+        default: "Premier League"
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pitchgraph
+        run: pip install -e .
+
+      - name: Replay
+        env:
+          TEAM: ${{ inputs.team }}
+          SEASON: ${{ inputs.season }}
+          COMPETITION: ${{ inputs.competition }}
+        run: python scripts/season_replay.py "$TEAM" "$SEASON" --competition "$COMPETITION" --out out/replay
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: season-replay
+          path: out/replay
