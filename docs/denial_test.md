@@ -84,3 +84,16 @@ Question: when the planner says one team depends on a link more than an average 
 - **Primary:** tested links are the two confirmed levers (left and right half-space to centre, final third). **Pass bar:** the 90% interval of gamma (resampling whole matches, 500 times) lies above 0.
 - Secondary (descriptive): the same with the two flank to half-space final-third links added; gamma's distance from 1.
 - Limit stated up front: with kappa = 1000 the team chains sit close to the league, so excesses are small and gamma may be imprecise. An interval that includes both 0 and 1 is reported as "cannot tell", not as a pass or a fail of the idea.
+
+### Result (2026-11-15): cannot tell
+
+5,456 team-matches, 57 control links.
+
+| | gamma (90% CI) |
+|---|---|
+| Primary: two half-space to centre links | **0.20** (-0.74 to 1.13) |
+| Secondary: plus two flank to half-space links | 0.28 (-0.43 to 1.05) |
+
+- The bar (interval above 0) is **not met**. The interval contains both 0 (the planner knows nothing team-specific) and 1 (its team-specific excess is exactly right), so as registered this is reported as "cannot tell".
+- Why: with kappa = 1000 a team's chain sits close to its league's. The planner's team-to-team spread on these links has a standard deviation of only 1.3 to 1.7 points of threat around a base of about 13, which 5,456 team-matches cannot resolve.
+- **Consequence:** team-specific "cut this link" numbers (for example Barcelona 2015/16 at 21 to 27% against 15%) stay labelled as model output. The team-specific pre-match content that *has* passed a test is where a matchup sends the attack (lanes), in `chains/validate.py`. The season replay leads with that.
