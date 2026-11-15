@@ -1,0 +1,55 @@
+name: Denial planner check
+
+# Pre-registered test (docs/denial_test.md): does the planner rank links the
+# way real matches do? Read-only on the lake.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pitchgraph
+        run: pip install -e .
+
+      - name: Install rclone
+        run: curl https://rclone.org/install.sh | sudo bash
+
+      - name: Configure rclone
+        env:
+          GDRIVE_OAUTH_TOKEN: ${{ secrets.GDRIVE_OAUTH_TOKEN }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf <<EOF
+          [gdrive]
+          type = drive
+          scope = drive
+          token = ${GDRIVE_OAUTH_TOKEN}
+          root_folder_id = ${GDRIVE_FOLDER_ID}
+          EOF
+
+      - name: Pull lake from Drive
+        run: |
+          mkdir -p "$HOME/pitchgraph/lake"
+          rclone copy gdrive:lake "$HOME/pitchgraph/lake" --fast-list --exclude "frames/**" --exclude "areas/**" -v
+
+      - name: Run the test
+        env:
+          PITCHGRAPH_DATA: /home/runner/pitchgraph
+        run: python scripts/validate_denial.py
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: denial-test-results
+          path: denial_test_results.json
+          if-no-files-found: ignore
