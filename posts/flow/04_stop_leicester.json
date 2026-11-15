@@ -6,7 +6,7 @@
  "kind": "flow_map",
  "title": "How to stop {team} {season_short}",
  "subtitle": "Routes they use more than the league, and the three links whose loss costs them most",
- "note": "Each team is a graph of 30 pitch zones. Cutting a link removes those moves; the range runs from 'they find another pass' to 'they lose the ball every time'. Model output, not yet tested against match results.",
- "caption": "How do you stop {team} {season_short}?\n\nI turned their season into a graph of how the ball moves between pitch zones, then removed one link at a time and re-solved it.\n\nThe link that costs them most: {from_label} → {to_label}. Cut it and their threat falls {lo:.0%} if they adapt, up to {hi:.0%} if they keep losing the ball there.\n\nThese are model ranges, not predictions I've tested against results yet.",
+ "note": "Each team is a graph of 30 pitch zones; cutting a link removes those moves. Across 5,456 team-matches the two half-space-to-centre links match what happens in real matches (12-14% of threat). Smaller links and team-specific differences are model output, not yet confirmed.",
+ "caption": "How do you stop {team} {season_short}?\n\nI turned their season into a graph of how the ball moves between pitch zones, then removed one link at a time and re-solved it.\n\nThe link that costs them most: {from_label} → {to_label}. Cut it and their threat falls {lo:.0%} if they adapt, up to {hi:.0%} if they keep losing the ball there.\n\nChecked against 5,456 real team-matches: the half-space-to-centre links are worth 12-14% of threat for an average team, as the model says. How much MORE one team depends on a link than another is still untested.",
  "subtitle_generic": "Routes they use more than the league. No link matters more to them than to an average side"
 }

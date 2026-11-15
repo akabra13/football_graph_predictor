@@ -44,3 +44,32 @@ This is observational. A team having a bad day uses its dangerous links less, so
 ## Amendment (written 2026-11-15, after seeing the result above; disclosed as a second look)
 
 Same data, outcome, regression and bar. One change: links are tested if they carry at least **0.25%** of moves (was 1%), so that final-third links are included. Rarer links have noisier usage ratios, which biases their observed values toward zero; that works against the planner, not for it. Because this follows a look at the first result, a pass here is weaker evidence than a first-time pass, and is reported that way.
+
+## Amendment result (2026-11-15): FAIL on the bar, but the two biggest levers are confirmed
+
+Same 5,456 team-matches, now **57 links**.
+
+| | Rank correlation with observed link values (90% CI) |
+|---|---|
+| Planner | **0.188** (0.02 to 0.30) |
+| Plain usage share | 0.013 (-0.14 to 0.14) |
+
+Bar 1 (at least 0.5) is missed clearly. 40% of observed values fall inside the planner's range. **Both versions of the test fail; the planner does not order the full set of links the way matches do.**
+
+What the per-link table shows:
+
+| Link | Planner range | Observed (90% CI) |
+|---|---|---|
+| Left half-space to centre, final third | 11.5 to 14.4% | **14.4%** (12.1 to 16.6) |
+| Right half-space to centre, final third | 11.6 to 14.3% | **12.3%** (10.2 to 14.5) |
+| Right flank to right half-space, final third | 4.1 to 9.9% | 4.2% (0.7 to 7.1) |
+| Left flank to left half-space, final third | 4.5 to 10.1% | 2.4% (-0.4 to 5.6) |
+| Flank, middle third to final third (both sides) | 2.7 to 6.9% | -1.2% and 2.0%, intervals include 0 |
+| The other 51 links | mostly under 3% | all within about 3 points of zero |
+
+- **The planner's two largest levers are the two largest in the data, and the sizes agree.** Moves from a half-space into the centre of the final third are worth 12 to 14% of a team's threat each; nothing else comes close.
+- **Below the top four, the data cannot tell links apart.** Observed values are within noise of zero, so a rank correlation over all 57 is mostly a correlation between noise and small numbers. That is why the bar fails, and it is also a limit on the planner: its ordering of minor links is not supported.
+- **Where the planner is too generous:** flank to half-space in the final third sits at or below the bottom of its range, and progression up the flank shows no measurable value. The "they lose the ball" end of those ranges is not reached.
+- **Still untested:** everything here pools all teams against the league chain. The claim that one team depends on a link more than another (Barcelona 2015/16 at 21 to 27% against 15% for an average side) has not been tested. And the caveat above stands: half-space to centre moves lead to shots almost by construction, so agreement on those two links is partly built in.
+
+**Consequence for pre-match use:** "deny the half-space to centre pass in the final third" is supported as the main lever against any team, at 12 to 14% of threat. A ranked plan of three or more links, and team-specific plans, are not supported yet.
