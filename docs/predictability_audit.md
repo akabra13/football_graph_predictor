@@ -37,3 +37,41 @@ Graph structure and topology of the match's region flow graph (15 regions): **en
 - The graph and topology features are held to the same rule. Stated expectation: they are summaries of the same counts, so they should not do better than the plain features; they earn a place only if they do.
 
 Not tested here: whether acting on a predictable feature changes a result.
+
+## Result (2026-11-15, run exactly as registered)
+
+13 league seasons, 5,456 team-matches. R² is against predicting the league average; "+ opponent" is what knowing the opponent adds on top.
+
+| Feature | R² from the team (90% CI) | + opponent (90% CI) | Tier |
+|---|---|---|---|
+| Turnovers per action | 0.430 (0.414 to 0.448) | +0.109 | lead |
+| Possession | 0.335 (0.322 to 0.349) | **+0.338** | lead |
+| Entries into the central final third per possession | 0.294 (0.272 to 0.315) | +0.154 | lead |
+| **Reciprocity** (graph) | 0.289 (0.272 to 0.306) | +0.077 | lead |
+| Long forward moves | 0.243 (0.227 to 0.258) | +0.070 | lead |
+| **Entropy rate** (graph) | 0.238 (0.221 to 0.253) | +0.105 | lead |
+| Directness | 0.203 (0.187 to 0.217) | +0.058 | lead |
+| xG per possession | 0.195 | +0.083 | usable |
+| Share of actions in the final third | 0.194 | +0.124 | usable |
+| Switches of play | 0.188 | +0.079 | usable |
+| Shots per possession | 0.173 | +0.140 | usable |
+| Height where possessions start | 0.157 | +0.151 | usable |
+| Width in the final third | 0.154 | +0.056 | usable |
+| Share of turnovers in own third | 0.126 | **+0.195** | usable |
+| Left-right balance | 0.117 | +0.019 | usable |
+| **Spectral gap** (graph) | 0.108 | +0.077 | usable |
+| Share of moves on the half-space-to-centre links | 0.108 | +0.069 | usable |
+| **Hodge circulation share** (graph) | 0.105 | +0.027 | usable |
+| Entries down the right flank / centre / left flank | 0.069 / 0.056 / 0.056 | about +0.01 to +0.03 | usable |
+| xG per shot | 0.038 | +0.018 | drop |
+| Entries through the left / right half-space | -0.003 / -0.007 | -0.019 | drop |
+
+What this says:
+
+- **The replay was scoring the wrong thing.** Where a team enters the final third, lane by lane, is the least knowable item on the list: 0 to 7% of a match is predictable, and half-space entries not at all. That is why no plan could beat the league average on lanes.
+- **A lot is knowable.** Who will have the ball (67% of the variation explained once both teams are known), how often a side gives it away, how often it reaches the central final third, how direct it plays, how high it wins the ball.
+- **The opponent matters for almost everything** (22 of 24 intervals above 0), and for two things it matters as much as the team itself: possession, and the share of turnovers in a team's own third. The second is the opponent's press showing up in the team's numbers.
+- **Graph features, against my stated expectation:** reciprocity and entropy rate are in the top tier, and spectral gap and Hodge circulation are usable. By the registered rule they earn a place. Not shown: that they add information beyond possession and directness, which they are likely to overlap with; that would need a joint model.
+- **Shot quality (xG per shot) is not predictable** match to match; shot volume is.
+
+Consequence: the pre-match report leads with the lead and usable features, both teams' predicted values with the opponent adjustment, and drops lane-by-lane entry calls.
