@@ -53,6 +53,8 @@ def test_flow_map_from_a_chain(tmp_path):
     data = flow_data(team, league, T[:, :n])
     assert len(data["links"]) == 3 and len(data["zone_vs_league"]) == n
     for k in data["links"]:
-        assert 0 <= k["lo"] <= k["hi"] <= 1      # adapting can never hurt more than losing the ball
+        # adapting can never hurt more than losing the ball; it can even help slightly,
+        # when the blocked moves were worse than the team's alternatives
+        assert k["lo"] <= k["hi"] <= 1
     h, w = mpimg.imread(flow_map(data, tmp_path / "f.png", "t")).shape[:2]
     assert (w, h) == (1600, 900)

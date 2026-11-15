@@ -122,10 +122,11 @@ def flow_map(data: dict, out: str | Path, title: str, subtitle: str = "", note: 
                   bbox=dict(boxstyle="circle,pad=0.25", fc=ACCENT, ec="none"))
         side.text(0.09, y + 0.028, _cap(k["from_label"]), fontsize=13.5, color=INK, va="center")
         side.text(0.09, y - 0.028, "→ " + k["to_label"], fontsize=13.5, color=INK, va="center")
-        x0, x1 = 0.09 + 0.8 * k["lo"] / hi_max, 0.09 + 0.8 * k["hi"] / hi_max
+        lo = max(k["lo"], 0.0)       # a cut the team fully absorbs is shown as no loss
+        x0, x1 = 0.09 + 0.8 * lo / hi_max, 0.09 + 0.8 * k["hi"] / hi_max
         side.plot([0.09, 0.89], [y - 0.09] * 2, color=GRID, lw=8, solid_capstyle="round")
         side.plot([x0, x1], [y - 0.09] * 2, color=ACCENT, lw=8, solid_capstyle="round")
-        side.text(0.09, y - 0.145, "{:.0%} if they adapt  ·  {:.0%} if they lose it".format(k["lo"], k["hi"]),
+        side.text(0.09, y - 0.145, "{:.0%} if they adapt  ·  {:.0%} if they lose it".format(lo, k["hi"]),
                   fontsize=12.5, color=MUTED, va="center")
     side.text(0, 0.0, "Blue zones: used more than the league average.\nDark arrows: their strongest routes.",
               fontsize=12, color=MUTED, va="bottom", linespacing=1.4)
