@@ -73,3 +73,14 @@ What the per-link table shows:
 - **Still untested:** everything here pools all teams against the league chain. The claim that one team depends on a link more than another (Barcelona 2015/16 at 21 to 27% against 15% for an average side) has not been tested. And the caveat above stands: half-space to centre moves lead to shots almost by construction, so agreement on those two links is partly built in.
 
 **Consequence for pre-match use:** "deny the half-space to centre pass in the final third" is supported as the main lever against any team, at 12 to 14% of threat. A ranked plan of three or more links, and team-specific plans, are not supported yet.
+
+## Pre-registered: team-specific test (written 2026-11-15, before running)
+
+Question: when the planner says one team depends on a link more than an average side does, do that team's real matches show it?
+
+- Same team-matches, outcome `y`, usage deviations `u_L` and 57 control links as the amended run.
+- For each team-match and each tested link, the **team's excess** `e` = the planner's midpoint drop on the team's own chain (fitted without this match, shrunk to the league without this match, with the season's kappa) minus the same midpoint on that league chain.
+- One extra term is added to the joint regression: `z = sum over tested links of u_L x e`. Its coefficient **gamma** reads directly: 1 means the planner's team-specific excess is the right size, 0 means it carries no information about this team.
+- **Primary:** tested links are the two confirmed levers (left and right half-space to centre, final third). **Pass bar:** the 90% interval of gamma (resampling whole matches, 500 times) lies above 0.
+- Secondary (descriptive): the same with the two flank to half-space final-third links added; gamma's distance from 1.
+- Limit stated up front: with kappa = 1000 the team chains sit close to the league, so excesses are small and gamma may be imprecise. An interval that includes both 0 and 1 is reported as "cannot tell", not as a pass or a fail of the idea.

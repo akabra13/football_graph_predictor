@@ -26,7 +26,7 @@ import polars as pl
 
 from pitchgraph.chains import denial
 from pitchgraph.chains.counts import CountStore
-from pitchgraph.chains.team import Chain, league_chain
+from pitchgraph.chains.team import Chain, league_chain, shrunk_chain
 
 N_REGIONS = 15
 MIN_POSSESSIONS = 20
@@ -40,12 +40,28 @@ def region_links(moves: np.ndarray, regions: np.ndarray) -> np.ndarray:
     return Z.T @ moves @ Z
 
 
-def match_rows(store: CountStore, min_matches: int = 10) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def _mid_drops(chain: Chain, masks: list[np.ndarray]) -> np.ndarray:
+    base = chain.threat
+    return np.array([0.5 * ((base - denial.deny(chain, m, adapt=True).threat)
+                            + (base - denial.deny(chain, m, adapt=False).threat)) / base for m in masks])
+
+
+def match_rows(store: CountStore, min_matches: int = 10,
+               excess_links: list[tuple[int, int]] | None = None, kappa: float | None = None):
     """Per team-match: y, the (15, 15) relative usage deviations, match id, and
     the raw link shares (for choosing which links are common enough to test).
 
     Everything a row is compared with comes from other matches.
+
+    With `excess_links` (and the season's `kappa`), a fifth array gives, per
+    row and link, the planner's midpoint drop on the team's own leave-this-
+    match-out chain minus the same on the leave-this-match-out league chain.
     """
+    masks = None
+    if excess_links is not None:
+        reg = denial.zone_regions(store.grid)
+        masks = [denial.link_mask(reg, a, b) for a, b in excess_links]
+    E = []
     n = store.n
     regions = denial.zone_regions(store.grid)
     eligible = {t for t in store.teams if store.team(t).n_matches >= min_matches}
@@ -78,7 +94,29 @@ def match_rows(store: CountStore, min_matches: int = 10) -> tuple[np.ndarray, np
             u = np.where(share_usual >= MIN_USUAL_SHARE,
                          share_now / np.clip(share_usual, 1e-12, None) - 1.0, 0.0)
             Y.append(y); U.append(np.clip(u, *U_CLIP)); M.append(mid); S.append(share_usual)
+            if masks is not None:
+                league = league_chain(LC - mC, Lxg - mxg, Lst - mst, store.grid)
+                team = shrunk_chain(*ta.total(rest_a), league, kappa)
+                E.append(_mid_drops(team, masks) - _mid_drops(league, masks))
+    if masks is not None:
+        return np.array(Y), np.array(U), np.array(M), np.array(S), np.array(E)
     return np.array(Y), np.array(U), np.array(M), np.array(S)
+
+
+def gamma_test(y, X, Z, match_ids, n_boot: int = 500, seed: int = 0) -> dict:
+    """Coefficient on the team-specific term Z (one column) in the joint
+    regression of y on X and Z, with a 90% interval by resampling matches."""
+    rng = np.random.default_rng(seed)
+    A = np.column_stack([X, Z])
+    g = float(fit_slopes(y, A)[-1])
+    uniq, inv = np.unique(match_ids, return_inverse=True)
+    rows_of = [np.flatnonzero(inv == i) for i in range(len(uniq))]
+    boots = []
+    for _ in range(n_boot):
+        idx = np.concatenate([rows_of[i] for i in rng.integers(0, len(uniq), len(uniq))])
+        boots.append(fit_slopes(y[idx], A[idx])[-1])
+    lo, hi = float(np.percentile(boots, 5)), float(np.percentile(boots, 95))
+    return {"gamma": g, "ci": [lo, hi], "passes_bar": bool(lo > 0)}
 
 
 def model_drops(league: Chain, links: list[tuple[int, int]]) -> np.ndarray:

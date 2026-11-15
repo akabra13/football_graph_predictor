@@ -6,6 +6,10 @@ name: Denial planner check
 on:
   workflow_dispatch:
     inputs:
+      script:
+        description: "validate_denial (links) or validate_team_denial (team-specific)"
+        required: false
+        default: "validate_denial"
       min_link_share:
         description: "Pooled share of moves a link needs to be tested (registered: 0.01; amendment: 0.0025)"
         required: false
@@ -51,11 +55,14 @@ jobs:
         env:
           PITCHGRAPH_DATA: /home/runner/pitchgraph
           SHARE: ${{ inputs.min_link_share }}
-        run: python scripts/validate_denial.py ${SHARE}
+          SCRIPT: ${{ inputs.script }}
+        run: python scripts/${SCRIPT}.py ${SHARE}
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: denial-test-results
-          path: denial_test_results.json
+          path: |
+            denial_test_results.json
+            team_denial_results.json
           if-no-files-found: ignore

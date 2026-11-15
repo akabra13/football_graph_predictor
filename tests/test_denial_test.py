@@ -77,3 +77,19 @@ def test_match_rows_and_model_drops_on_a_small_league():
     drops = model_drops(league_of(store), [(7, 12), (5, 12)])
     assert drops.shape == (2, 2) and (drops[:, 0] <= drops[:, 1] + 1e-12).all()
     assert drops[0, 1] > 0                             # the centre route into the box carries threat
+
+
+def test_team_excess_and_gamma_recovers_a_known_team_effect():
+    from pitchgraph.chains.denial_test import gamma_test
+
+    store = CountStore.from_events(_league_events(), TACTICAL)
+    y, U, M, S, E = match_rows(store, min_matches=5, excess_links=[(7, 12), (5, 12)], kappa=10.0)
+    assert E.shape == (36, 2) and np.isfinite(E).all()
+
+    rng = np.random.default_rng(2)
+    X = rng.normal(size=(4000, 2))
+    e = rng.normal(scale=0.05, size=4000)
+    z = X[:, 0] * e
+    yy = X @ np.array([0.13, 0.02]) + 1.0 * z + rng.normal(scale=0.05, size=4000)
+    res = gamma_test(yy, X, z, np.repeat(np.arange(2000), 2), n_boot=60)
+    assert abs(res["gamma"] - 1.0) < 0.15 and res["passes_bar"]
