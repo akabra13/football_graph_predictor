@@ -103,7 +103,8 @@ def _summary(s):
     def row(label, d, n):
         return (f"<tr><td>{label}</td>" + "".join(
             f'<td>{d[m]["top_lane_hits"]}/{n}</td><td>{d[m]["mean_tv"]:.3f}</td>'
-            for m in ("matchup", "own", "league")) + f'<td>{d["matchup_beats_own"]}/{n}</td></tr>')
+            for m in ("matchup", "own", "league")) + f'<td>{d["floor"]:.3f}</td>'
+                f'<td>{d["matchup_beats_own"]}/{n}</td></tr>')
     n = s["games"]
     extra = ""
     if "lever_vs_threat_r" in s:
@@ -114,10 +115,11 @@ def _summary(s):
     return (
         '<div class="card"><h2 style="margin-top:0">Scorecard</h2><table><tr><th>Lane calls</th>'
         '<th>Plan: busiest lane</th><th>distance</th><th>Own habits: busiest</th><th>distance</th>'
-        '<th>League: busiest</th><th>distance</th><th>Plan closer than own habits</th></tr>'
+        '<th>League: busiest</th><th>distance</th><th>Best possible</th><th>Plan closer than own habits</th></tr>'
         + row("Where they attacked", s["they"], n) + row("Where we attacked", s["we"], n) + "</table>"
         '<p class="small muted">Distance = total variation between predicted and real lane shares, averaged '
-        'over games; 0 is perfect.</p>' + extra + "</div>")
+        'over games. "Best possible" is the distance a perfect prediction would still show, because one match '
+        'has only a few dozen entries.</p>' + extra + "</div>")
 
 
 def render_html(rep: dict, team: str, competition: str, season: str) -> str:

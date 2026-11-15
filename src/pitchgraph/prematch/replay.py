@@ -63,6 +63,17 @@ def tv(a: np.ndarray, b: np.ndarray) -> float:
     return float(0.5 * np.abs(np.asarray(a) - np.asarray(b)).sum())
 
 
+def noise_floor(shares, n: int, draws: int = 400, seed: int = 0) -> float:
+    """The distance a PERFECT prediction would still show after n entries:
+    the mean total variation between `shares` and a sample of n drawn from it.
+    One match has only a few dozen entries, so even the truth looks wrong by this much."""
+    p = np.asarray(shares, float)
+    if n <= 0:
+        return float("nan")
+    sample = np.random.default_rng(seed).multinomial(n, p / p.sum(), size=draws) / n
+    return float(0.5 * np.abs(sample - p).sum(1).mean())
+
+
 class AsOf:
     """Chains fitted on a chosen set of earlier matches."""
 
@@ -190,6 +201,7 @@ def outcome(asof: AsOf, us: int, them: int, mid: int, prior: set, the_plan: dict
         calls = the_plan[key]
         out[who] = {"entries": float(counts.sum()), "actual": actual.tolist(),
                     "tv": {m: tv(calls[m], actual) for m in calls},
+                    "floor": noise_floor(calls["matchup"], int(counts.sum())),
                     "top_hit": {m: bool(int(np.argmax(calls[m])) == int(np.argmax(actual))) for m in calls}}
 
     tc = store.team(them, "attack")
@@ -259,6 +271,7 @@ def summarise(games: list[dict]) -> dict:
                         "mean_tv": float(np.mean([r["tv"][m] for r in rows])) if rows else None}
                     for m in ("matchup", "own", "league")}
         out[who]["matchup_beats_own"] = int(sum(r["tv"]["matchup"] < r["tv"]["own"] for r in rows))
+        out[who]["floor"] = float(np.nanmean([r["floor"] for r in rows])) if rows else None
     pairs = [(g["outcome"]["lever"]["vs_usual"], g["outcome"]["their_threat"]["vs_expected"]) for g in done]
     pairs = [(u, y) for u, y in pairs if u is not None and y is not None]
     if len(pairs) >= 4:
