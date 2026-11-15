@@ -88,3 +88,23 @@ def test_report_renders_every_game():
     html = render_html(rep, "T1", "Test League", "2020")
     assert html.count('class="card"') == 2 + len(rep["games"])      # caveats, scorecard, one per game
     assert "Scorecard" in html and "StatsBomb" in html and "<script" not in html
+
+
+def test_calls_are_made_from_earlier_matches_and_scored():
+    from pitchgraph.prematch.replay import CALLS
+
+    ev, matches = _league()
+    rep = replay(ev, matches, team_id=1, start_fraction=0.5, kappa=10.0)
+    g = rep["games"][0]
+    for who in ("we", "they"):
+        # the toy league has no giveaways, so that one call has nothing to go on and is left out
+        assert set(g["calls"][who]) == {f for f, _, _ in CALLS} - {"own_third_turnover_share"}
+    poss = g["calls"]["we"]["possession"]
+    assert 0 < poss["predicted"] < 1 and poss["actual"] is not None
+    assert isinstance(poss["closer_than_league"], bool)
+    s = rep["summary"]
+    assert s["calls_total"] > 0 and 0 <= s["calls_closer"] <= s["calls_total"]
+    # changing this match's own events cannot change what was called for it
+    later = ev.with_columns(x=pl.when(pl.col("match_id") == g["match_id"]).then(pl.lit(60.0)).otherwise(pl.col("x")))
+    again = replay(later, matches, team_id=1, start_fraction=0.5, kappa=10.0)["games"][0]
+    assert again["calls"]["we"]["possession"]["predicted"] == poss["predicted"]

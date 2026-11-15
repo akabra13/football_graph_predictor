@@ -33,6 +33,7 @@ from pitchgraph.chains.denial_test import region_links
 from pitchgraph.chains.team import Chain, league_chain, shrunk_chain
 from pitchgraph.chains.validate import _crossing_lanes, _observed_lanes
 from pitchgraph.graphs.routes import LANE_EDGES
+from pitchgraph.prematch.audit import PSEUDO, season_table
 
 KAPPA = 1000.0
 MIN_PRIOR = 5                       # matches a team needs before a plan is made
@@ -40,6 +41,60 @@ LANE_LABELS = ["left flank", "left half-space", "centre", "right half-space", "r
 LEVERS = {"left": (11, 12), "right": (13, 12)}     # half-space -> centre, final third
 DEFENSIVE = ["Pressure", "Duel", "Interception", "Block", "Ball Recovery", "Clearance", "Foul Committed"]
 LINE = 80.0
+TURNOVERS = ["Dispossessed", "Miscontrol"]
+
+# What the plan calls before the match: features that passed the predictability
+# audit (docs/predictability_audit.md), each predicted from the team's earlier
+# matches plus what earlier opponents did against this opponent.
+CALLS = [
+    ("possession", "Share of the ball", "{:.0%}"),
+    ("turnover_rate", "Giveaways per action", "{:.1%}"),
+    ("own_third_turnover_share", "Share of giveaways in own third", "{:.0%}"),
+    ("central_entries_per_possession", "Entries into the central final third per possession", "{:.2f}"),
+    ("shots_per_possession", "Shots per possession", "{:.3f}"),
+    ("start_height", "Where possessions start (0 own goal, 120 theirs)", "{:.0f}"),
+    ("long_forward_share", "Long forward moves", "{:.1%}"),
+    ("reciprocity", "Back-and-forth passing (graph reciprocity)", "{:.0%}"),
+    ("entropy_rate", "Unpredictability of the next move (bits)", "{:.2f}"),
+]
+
+
+def asof_call(table: pl.DataFrame, feature: str, team: int, opp: int, prior: set) -> dict | None:
+    """Predicted value of `feature` for `team` against `opp`, from `prior` matches only:
+    the team's own mean plus how far earlier opponents of `opp` were pushed from the league mean,
+    each shrunk to the league with PSEUDO pseudo-matches."""
+    t = table.filter(pl.col("match_id").is_in(list(prior))).filter(pl.col(feature).is_finite())
+    if t.height == 0:
+        return None
+    league = float(t[feature].mean())
+
+    def shrunk(rows):
+        v = rows[feature]
+        return (float(v.sum()) + PSEUDO * league) / (v.len() + PSEUDO)
+
+    own = shrunk(t.filter(pl.col("team_id") == team))
+    against = shrunk(t.filter(pl.col("opp_id") == opp))
+    return {"predicted": own + against - league, "own": own, "league": league}
+
+
+def calls_for(table: pl.DataFrame, us: int, them: int, mid: int, prior: set) -> dict:
+    """Every call for both sides, with the real value from the match."""
+    out = {}
+    for who, a, b in (("we", us, them), ("they", them, us)):
+        row = table.filter((pl.col("match_id") == mid) & (pl.col("team_id") == a))
+        out[who] = {}
+        for feature, _, _ in CALLS:
+            c = asof_call(table, feature, a, b, prior)
+            if c is None:
+                continue
+            actual = float(row[feature][0]) if row.height else None
+            if actual is not None and not np.isfinite(actual):
+                actual = None
+            c["actual"] = actual
+            c["closer_than_league"] = (abs(c["predicted"] - actual) < abs(c["league"] - actual)
+                                       if actual is not None else None)
+            out[who][feature] = c
+    return out
 
 
 def mirror_lane(lane: int) -> int:
@@ -145,8 +200,15 @@ def player_links(ev: pl.DataFrame, prior: set, us: int, them: int, side: str, la
     t = (LINE - pl.col("x")) / (pl.col("end_x") - pl.col("x") + 1e-9)
     y_at = pl.col("y") + t * (pl.col("end_y") - pl.col("y"))
     cross_lane = pl.sum_horizontal([(y_at >= e).cast(pl.Int32) for e in LANE_EDGES])
-    ours_att = moves.filter(cross_lane == lane_we)
-    return {"their_passers": _top(theirs, "player_id", names, 2),
+    ours_att = moves.filter(cross_lane == lane_we) if lane_we is not None else moves
+    failed_pass = (pl.col("type") == "Pass") & pl.col("outcome").is_not_null()
+    their_losses = prev.filter((pl.col("team_id") == them) & (failed_pass | pl.col("type").is_in(TURNOVERS))
+                               & pl.col("x").is_not_null() & (pl.col("x") < 40))
+    our_press = prev.filter((pl.col("team_id") == us) & (pl.col("type") == "Pressure")
+                            & pl.col("x").is_not_null() & (pl.col("x") >= 80))
+    return {"their_giveaways": _top(their_losses, "player_id", names),
+            "our_pressers": _top(our_press, "player_id", names),
+            "their_passers": _top(theirs, "player_id", names, 2),
             "their_receivers": _top(recv, "recipient_id", names, 2),
             "our_defenders": _top(ours_def, "player_id", names),
             "our_carriers": _top(ours_att, "player_id", names)}
@@ -181,7 +243,7 @@ def plan(asof: AsOf, ev: pl.DataFrame, us: int, them: int, prior: set, names: di
     return {"they_attack": {k: v.tolist() for k, v in they.items()},
             "we_attack": {k: v.tolist() for k, v in we.items()},
             "lever": lever, "lever_side": side, "lane_we": lane_we,
-            "players": player_links(ev, prior, us, them, side, lane_we, names),
+            "players": player_links(ev, prior, us, them, side, None, names),
             "prior_matches": {"us": int(asof.keep(us, "attack", prior).sum()),
                               "them": int(asof.keep(them, "attack", prior).sum())}}
 
@@ -229,7 +291,7 @@ def outcome(asof: AsOf, us: int, them: int, mid: int, prior: set, the_plan: dict
 
 
 def replay(ev: pl.DataFrame, matches: pl.DataFrame, team_id: int, names: dict | None = None,
-           start_fraction: float = 0.5, kappa: float = KAPPA) -> dict:
+           start_fraction: float = 0.5, kappa: float = KAPPA, min_matches: int = 10) -> dict:
     """Walk `team_id` through the later part of its season.
 
     `ev` is one competition-season of `Lake.events()`; `matches` its rows of
@@ -239,7 +301,8 @@ def replay(ev: pl.DataFrame, matches: pl.DataFrame, team_id: int, names: dict | 
     names = names or {}
     store = CountStore.from_events(ev.lazy())
     asof = AsOf(store, kappa)
-    info = {r["match_id"]: r for r in matches.iter_rows(named=True)}
+    ftable = season_table(store, min_matches=min_matches)
+    info ={r["match_id"]: r for r in matches.iter_rows(named=True)}
     dates = {m: str(r["match_date"]) for m, r in info.items()}
     mine = sorted((m for m, r in info.items() if team_id in (r["home_team_id"], r["away_team_id"])),
                   key=lambda m: (dates[m], m))
@@ -256,6 +319,7 @@ def replay(ev: pl.DataFrame, matches: pl.DataFrame, team_id: int, names: dict | 
                 "plan": p}
         if p is not None and mid in asof.per_match:
             game["outcome"] = outcome(asof, team_id, them, mid, prior, p)
+            game["calls"] = calls_for(ftable, team_id, them, mid, prior)
         games.append(game)
     return {"team_id": int(team_id), "games": games, "summary": summarise(games)}
 
@@ -264,7 +328,24 @@ def summarise(games: list[dict]) -> dict:
     """Lane calls over all games: how often each guess named the busiest lane,
     and how far its shares were from the real ones (lower is better)."""
     done = [g for g in games if g.get("outcome")]
-    out = {"games": len(done)}
+    out = {"games": len(done), "calls": {}}
+    closer = total = 0
+    for who in ("we", "they"):
+        out["calls"][who] = {}
+        for feature, _, _ in CALLS:
+            rows = [g["calls"][who][feature] for g in done
+                    if g.get("calls") and feature in g["calls"][who]
+                    and g["calls"][who][feature]["actual"] is not None]
+            if not rows:
+                continue
+            a = np.array([r["actual"] for r in rows])
+            sse = float(((np.array([r["predicted"] for r in rows]) - a) ** 2).sum())
+            sse0 = float(((np.array([r["league"] for r in rows]) - a) ** 2).sum())
+            hits = int(sum(r["closer_than_league"] for r in rows))
+            closer, total = closer + hits, total + len(rows)
+            out["calls"][who][feature] = {"n": len(rows), "closer_than_league": hits,
+                                          "skill": 1 - sse / sse0 if sse0 > 0 else None}
+    out["calls_closer"], out["calls_total"] = closer, total
     for who in ("they", "we"):
         rows = [g["outcome"][who] for g in done]
         out[who] = {m: {"top_lane_hits": int(sum(r["top_hit"][m] for r in rows)),
