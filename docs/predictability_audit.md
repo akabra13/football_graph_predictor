@@ -75,3 +75,13 @@ What this says:
 - **Shot quality (xG per shot) is not predictable** match to match; shot volume is.
 
 Consequence: the pre-match report leads with the lead and usable features, both teams' predicted values with the opponent adjustment, and drops lane-by-lane entry calls.
+
+## Pre-registered: pooled replay, every team (written 2026-11-15, before running)
+
+The audit above used leave-one-match-out, which borrows from matches played later. The Leicester replay used only earlier matches but is one team. This test puts the two together: **the replay's calls for every team, scored together.**
+
+- **Units:** in each of the 13 league seasons, every team-match in the second half of that team's fixtures (by date) where the team has at least 5 earlier matches.
+- **Call:** exactly the replay's (`asof_call`): the team's mean over matches played on earlier dates, plus how far earlier opponents of this opponent were pushed from the league mean, each shrunk with 5 pseudo-matches. League baseline: the mean over earlier matches.
+- **Score per feature:** skill = 1 − SSE(call) / SSE(league baseline), pooled over all units, with a 90% interval from resampling whole matches (500 times).
+- **Primary:** the nine calls the replay makes. A call **holds** if its interval is above 0. **Pass bar: at least 7 of the 9 hold.**
+- **Secondary (descriptive):** the same for all 24 audited features; what the opponent term adds (skill of the full call minus skill of the team-only call); and, per team with at least 8 scored games, the share of its calls that were closer than the league baseline (reported as a distribution, so one good team cannot carry the result).
