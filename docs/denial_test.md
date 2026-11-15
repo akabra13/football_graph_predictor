@@ -27,3 +27,20 @@ Reported but not part of the bar: the share of links whose observed value falls 
 ## What a result can and cannot mean
 
 This is observational. A team having a bad day uses its dangerous links less, so the coefficients can overstate what denying a link would cause. A pass would mean the planner orders links the way matches do; it would not prove that a defence that shuts the link gets the drop. A fail means the "how to stop them" framing has to go, and the images become descriptions of where a team's threat comes from.
+
+## Result (2026-11-15, run exactly as registered): FAIL, and the test missed the claim
+
+13 league seasons, 5,456 team-matches, 2,728 matches. Only **10 links** carried 1% of moves, all of them in the middle third.
+
+| | Rank correlation with observed link values (90% CI) |
+|---|---|
+| Planner (midpoint of its range) | **0.455** (0.15 to 0.66) |
+| Plain usage share | -0.83 (-0.88 to -0.48) |
+
+- Bar 1 (at least 0.5): **missed**, narrowly. Bar 2 (interval above 0): met. Bar 3 (beats usage): met by a wide margin; the busiest links are sideways passes in midfield, which go with *less* threat.
+- 5 of the 10 observed values fall inside the planner's range. Moving the ball from the flank in the middle third into the final third is worth 3 to 5% of threat (planner: 3 to 7%). Sideways moves from the half-space out to the flank are negative (-8%), where the planner says about 0 to 5%.
+- **The design flaw:** the 1% threshold, which I set, removed every final-third link. The planner's headline levers (half-space to centre in the final third, 11 to 27% in the published images) were never tested. So this result says the planner orders midfield links moderately well; it says nothing about the claims the images make.
+
+## Amendment (written 2026-11-15, after seeing the result above; disclosed as a second look)
+
+Same data, outcome, regression and bar. One change: links are tested if they carry at least **0.25%** of moves (was 1%), so that final-third links are included. Rarer links have noisier usage ratios, which biases their observed values toward zero; that works against the planner, not for it. Because this follows a look at the first result, a pass here is weaker evidence than a first-time pass, and is reported that way.

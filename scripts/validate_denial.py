@@ -24,7 +24,7 @@ from pitchgraph.data.lake import Lake  # noqa: E402
 from pitchgraph.library.build import eligible_seasons  # noqa: E402
 
 MIN_TEAMS = 8            # teams with 10+ matches, so a league baseline exists
-MIN_LINK_SHARE = 0.01    # a link must carry 1% of moves (pooled) to be tested
+MIN_LINK_SHARE = float(sys.argv[1]) if len(sys.argv) > 1 else 0.01   # pooled share of moves a link needs
 PASS_SPEARMAN = 0.5
 
 if __name__ == "__main__":

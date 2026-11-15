@@ -4,7 +4,12 @@ name: Denial planner check
 # way real matches do? Read-only on the lake.
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      min_link_share:
+        description: "Pooled share of moves a link needs to be tested (registered: 0.01; amendment: 0.0025)"
+        required: false
+        default: "0.01"
 
 jobs:
   check:
@@ -45,7 +50,8 @@ jobs:
       - name: Run the test
         env:
           PITCHGRAPH_DATA: /home/runner/pitchgraph
-        run: python scripts/validate_denial.py
+          SHARE: ${{ inputs.min_link_share }}
+        run: python scripts/validate_denial.py ${SHARE}
 
       - uses: actions/upload-artifact@v4
         if: always()
