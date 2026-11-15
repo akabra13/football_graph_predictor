@@ -13,7 +13,7 @@ on:
         default: ""
   push:
     branches: [main]
-    paths: ["posts/**", "src/pitchgraph/figures/**"]
+    paths: ["posts/**", "src/pitchgraph/figures/**", "scripts/build_*posts.py"]
 
 jobs:
   posts:
@@ -38,6 +38,12 @@ jobs:
           PITCHGRAPH_LOGO: /home/runner/statsbomb_logo.png
           POST_HANDLE: ${{ inputs.handle }}
         run: python scripts/build_posts.py --out out/posts
+
+      - name: Render flow-map posts (streams each season from StatsBomb, in memory)
+        env:
+          PITCHGRAPH_LOGO: /home/runner/statsbomb_logo.png
+          POST_HANDLE: ${{ inputs.handle }}
+        run: python scripts/build_flow_posts.py --out out/posts
 
       - uses: actions/upload-artifact@v4
         with:

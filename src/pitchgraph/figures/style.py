@@ -58,7 +58,7 @@ def _fit_left_labels(fig, margin=0.05, gap=0.015):
     width_px = fig.get_figwidth() * fig.dpi
     for ax in fig.axes:
         labels = [t for t in ax.get_yticklabels() if t.get_visible() and t.get_text()]
-        if not labels or not ax.yaxis.get_visible():
+        if not labels or not ax.axison or not ax.yaxis.get_visible():
             continue
         w = max(t.get_window_extent(renderer).width for t in labels) / width_px
         pos = ax.get_position()
