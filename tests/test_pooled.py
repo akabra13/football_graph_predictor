@@ -68,3 +68,19 @@ def test_pooled_skill_holds_with_a_team_effect_and_not_without():
     assert not none["holds"]
     shares = team_shares([asof_arrays(*_table(team_effect=1.5), ["f"])], [0], min_games=5)
     assert len(shares) == 8 and np.median(shares) > 0.5
+
+
+def test_premises_fire_on_strong_teams_and_mostly_hold():
+    from pitchgraph.prematch.pooled import premise_rows
+
+    table, dates = _table(team_effect=2.0)
+    p = asof_arrays(table, dates, ["f"])
+    for who in ("we", "they"):
+        fired, held, m = premise_rows(p, 0, who, +1, 0.5)
+        assert len(fired) == len(held) == len(m) and fired.any()
+        assert held[fired].mean() > 0.7 > held[~fired].mean()     # called high -> usually was high
+    # "they" reads the opponent's row: a fired premise there means the OPPONENT is the strong side
+    fired, _, _ = premise_rows(p, 0, "they", +1, 0.5)
+    rows = np.flatnonzero(p["scored"])[fired]
+    assert (p["call"][[np.flatnonzero((p["match"] == p["match"][r]) & (p["team"] == p["opp"][r]))[0]
+                       for r in rows], 0] > p["league"][rows, 0]).all()

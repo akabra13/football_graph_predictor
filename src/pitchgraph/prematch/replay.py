@@ -33,6 +33,7 @@ from pitchgraph.chains.denial_test import region_links
 from pitchgraph.chains.team import Chain, league_chain, shrunk_chain
 from pitchgraph.chains.validate import _crossing_lanes, _observed_lanes
 from pitchgraph.graphs.routes import LANE_EDGES
+from pitchgraph.prematch import strategy
 from pitchgraph.prematch.audit import PSEUDO, season_table
 
 KAPPA = 1000.0
@@ -67,6 +68,7 @@ def asof_call(table: pl.DataFrame, feature: str, team: int, opp: int, prior: set
     if t.height == 0:
         return None
     league = float(t[feature].mean())
+    league_sd = float(t[feature].std(ddof=0)) if t.height > 1 else 0.0
 
     def shrunk(rows):
         v = rows[feature]
@@ -74,7 +76,7 @@ def asof_call(table: pl.DataFrame, feature: str, team: int, opp: int, prior: set
 
     own = shrunk(t.filter(pl.col("team_id") == team))
     against = shrunk(t.filter(pl.col("opp_id") == opp))
-    return {"predicted": own + against - league, "own": own, "league": league}
+    return {"predicted": own + against - league, "own": own, "league": league, "league_sd": league_sd}
 
 
 def calls_for(table: pl.DataFrame, us: int, them: int, mid: int, prior: set) -> dict:
@@ -320,6 +322,8 @@ def replay(ev: pl.DataFrame, matches: pl.DataFrame, team_id: int, names: dict | 
         if p is not None and mid in asof.per_match:
             game["outcome"] = outcome(asof, team_id, them, mid, prior, p)
             game["calls"] = calls_for(ftable, team_id, them, mid, prior)
+            game["strategy"] = strategy.lines(game["calls"], p["players"], game["opponent"],
+                                              {f: fmt for f, _, fmt in CALLS})
         games.append(game)
     return {"team_id": int(team_id), "games": games, "summary": summarise(games)}
 
@@ -346,6 +350,15 @@ def summarise(games: list[dict]) -> dict:
             out["calls"][who][feature] = {"n": len(rows), "closer_than_league": hits,
                                           "skill": 1 - sse / sse0 if sse0 > 0 else None}
     out["calls_closer"], out["calls_total"] = closer, total
+    fired = [s for g in done for s in g.get("strategy", []) if s["premise_held"] is not None]
+    out["strategy_lines"] = len(fired)
+    out["strategy_premises_held"] = int(sum(s["premise_held"] for s in fired))
+    by_rule = {}
+    for s in fired:
+        r = by_rule.setdefault(s["rule"], [0, 0])
+        r[0] += int(s["premise_held"])
+        r[1] += 1
+    out["strategy_by_rule"] = by_rule
     for who in ("they", "we"):
         rows = [g["outcome"][who] for g in done]
         out[who] = {m: {"top_lane_hits": int(sum(r["top_hit"][m] for r in rows)),

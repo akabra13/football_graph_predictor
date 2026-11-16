@@ -67,4 +67,5 @@ jobs:
             team_denial_results.json
             predictability_audit.json
             replay_all_results.json
+            strategy_premises.json
           if-no-files-found: ignore

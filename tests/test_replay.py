@@ -108,3 +108,23 @@ def test_calls_are_made_from_earlier_matches_and_scored():
     later = ev.with_columns(x=pl.when(pl.col("match_id") == g["match_id"]).then(pl.lit(60.0)).otherwise(pl.col("x")))
     again = replay(later, matches, team_id=1, start_fraction=0.5, kappa=10.0)["games"][0]
     assert again["calls"]["we"]["possession"]["predicted"] == poss["predicted"]
+
+
+def test_strategy_lines_rest_on_calls_and_are_checked():
+    from pitchgraph.prematch.strategy import MAX_LINES, RULES, THRESHOLD, departure, lines
+
+    call = {"predicted": 0.30, "league": 0.50, "league_sd": 0.10, "actual": 0.35}
+    assert abs(departure(call, -1) - 2.0) < 1e-9 and departure(call, +1) < 0
+    calls = {"we": {"possession": call}, "they": {}}
+    out = lines(calls, {"our_pressers": [{"name": "A"}]}, "Opp FC", {"possession": "{:.0%}"})
+    assert [s["rule"] for s in out] == ["without_ball"] and out[0]["premise_held"] is True
+    assert "30%" in out[0]["text"] and "50%" in out[0]["text"]
+    weak = {"we": {"possession": {**call, "predicted": 0.48}}, "they": {}}
+    assert lines(weak, {}, "Opp FC", {"possession": "{:.0%}"}) == []          # under the threshold: no line
+    assert THRESHOLD == 0.5 and len({r[0] for r in RULES}) == len(RULES)
+
+    ev, matches = _league()
+    rep = replay(ev, matches, team_id=1, start_fraction=0.5, kappa=10.0)
+    assert all(len(g["strategy"]) <= MAX_LINES for g in rep["games"])
+    s = rep["summary"]
+    assert s["strategy_premises_held"] <= s["strategy_lines"]

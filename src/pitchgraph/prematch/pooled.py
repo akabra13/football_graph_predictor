@@ -23,7 +23,7 @@ def asof_arrays(table: pl.DataFrame, dates: dict, features: list[str], start_fra
     V = table.select(features).to_numpy().astype(float)
     V = np.where(np.isfinite(V), V, np.nan)
     N, K = V.shape
-    call, own_, league_ = (np.full((N, K), np.nan) for _ in range(3))
+    call, own_, league_, sd_ = (np.full((N, K), np.nan) for _ in range(4))
     n_prior = np.zeros(N, dtype=int)
 
     def shrunk(rows: np.ndarray, league: np.ndarray) -> np.ndarray:
@@ -39,7 +39,9 @@ def asof_arrays(table: pl.DataFrame, dates: dict, features: list[str], start_fra
         with np.errstate(invalid="ignore"):
             cnt = np.isfinite(V[prior]).sum(0)
             league = np.where(cnt > 0, np.nansum(V[prior], 0) / np.maximum(cnt, 1), np.nan)
+            sd = np.sqrt(np.where(cnt > 0, np.nansum((V[prior] - league) ** 2, 0) / np.maximum(cnt, 1), np.nan))
         for r in np.flatnonzero(d == dd):
+            sd_[r] = sd
             mine = prior & (team == team[r])
             own = shrunk(mine, league)
             against = shrunk(prior & (opp == opp[r]), league)
@@ -51,7 +53,8 @@ def asof_arrays(table: pl.DataFrame, dates: dict, features: list[str], start_fra
         idx = np.flatnonzero(team == t)
         order = idx[np.lexsort((mid[idx], d[idx]))]
         later[order[int(len(order) * start_fraction):]] = True
-    return {"actual": V, "call": call, "own": own_, "league": league_, "match": mid, "team": team,
+    return {"actual": V, "call": call, "own": own_, "league": league_, "league_sd": sd_, "match": mid,
+            "team": team, "opp": opp,
             "scored": later & (n_prior >= MIN_PRIOR)}
 
 
@@ -101,3 +104,25 @@ def team_shares(parts: list[dict], cols: list[int], min_games: int = 8) -> list[
             if ok.any():
                 out.append(float((np.abs(c - a) < np.abs(lg - a))[ok].mean()))
     return out
+
+
+def premise_rows(p: dict, k: int, who: str, direction: int, threshold: float):
+    """For feature column k of one season's `asof_arrays`: per scored unit,
+    whether a rule on that feature fires and whether its situation occurred.
+
+    who = "we" reads the unit's own row; "they" reads the opponent's row of
+    the same match (the opponent's call against this team).
+    Returns (fired, held, match ids), over scored units with usable values.
+    """
+    idx = np.arange(len(p["match"]))
+    if who == "they":
+        where = {(int(m), int(t)): i for i, (m, t) in enumerate(zip(p["match"], p["team"]))}
+        idx = np.array([where.get((int(m), int(o)), -1) for m, o in zip(p["match"], p["opp"])])
+    ok = p["scored"] & (idx >= 0)
+    src = np.where(idx >= 0, idx, 0)
+    call, league, sd, actual = (p[name][src, k] for name in ("call", "league", "league_sd", "actual"))
+    ok &= np.isfinite(call) & np.isfinite(league) & np.isfinite(actual) & np.isfinite(sd) & (sd > 0)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        fired = direction * (call - league) / sd >= threshold
+        held = direction * (actual - league) > 0
+    return fired[ok], held[ok], p["match"][ok]

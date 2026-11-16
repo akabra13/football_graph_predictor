@@ -56,6 +56,20 @@ def _calls_table(calls, team, opp):
             "Red: it was not.</p>")
 
 
+def _strategy(lines):
+    if not lines:
+        return ('<h3>The plan</h3><p class="muted">Nothing about this match departs enough from the league to '
+                "build an instruction on. Play your normal game.</p>")
+    items = []
+    for s in lines:
+        mark = ""
+        if s["premise_held"] is not None:
+            mark = (' <span class="good">✓ the situation occurred</span>' if s["premise_held"]
+                    else ' <span class="bad">✗ it did not</span>')
+        items.append(f"<li>{escape(s['text'])}{mark}</li>")
+    return "<h3>The plan</h3><ol style='margin:4px 0 10px;padding-left:20px;line-height:1.5'>" + "".join(items) + "</ol>"
+
+
 def _game(g, team):
     opp = escape(g["opponent"])
     head = (f'<div class="card"><div class="muted small">{g["date"]} · {"home" if g["home"] else "away"}</div>'
@@ -66,7 +80,8 @@ def _game(g, team):
         return head + '<p class="muted">Too few earlier matches for a plan.</p></div>'
     pl_ = p["players"]
     side = p["lever_side"]
-    body = _calls_table(g["calls"], team, g["opponent"]) if g.get("calls") else ""
+    body = _strategy(g.get("strategy") or [])
+    body += _calls_table(g["calls"], team, g["opponent"]) if g.get("calls") else ""
     body += (
         '<div class="cols"><div>'
         "<h3>Their pass to stop</h3>"
@@ -114,6 +129,9 @@ def _summary(s, team):
         '<div class="card"><h2 style="margin-top:0">Scorecard</h2>'
         f'<p><b>{s["calls_closer"]} of {s["calls_total"]}</b> calls were closer to what happened than the league '
         f'average was, over {s["games"]} games.</p>'
+        + (f'<p>The plans gave <b>{s["strategy_lines"]}</b> instructions; for <b>{s["strategy_premises_held"]}</b> '
+           f'of them the situation the instruction was written for did occur in the match.</p>'
+           if s.get("strategy_lines") else "") +
         '<div class="scroll"><table><tr><th>Call</th>'
         f'<th>{escape(team)}: closer</th><th>skill</th><th>Opponents: closer</th><th>skill</th></tr>'
         + "".join(rows) + "</table></div>"
@@ -133,7 +151,9 @@ def render_html(rep: dict, team: str, competition: str, season: str) -> str:
         'team-matches found knowable before kick-off, each predicted from the team\'s earlier matches and from what '
         'earlier opponents did against this opponent. Lane-by-lane entry calls were dropped: the audit found them '
         'the least knowable item tested.</p><p><span class="tag info">What is not claimed</span> A replay shows '
-        'what the tool would have said. It cannot show what would have happened had the team acted on it. Player '
+        'what the tool would have said. It cannot show what would have happened had the team acted on it. Each '
+        'instruction in a plan is football judgement resting on one call; the tick shows whether that call\'s '
+        'situation occurred, not whether the instruction worked. Player '
         'lists describe who has done the job so far, not who should.</p></div>'
         + _summary(rep["summary"], team) + games +
         '<p class="small muted">Data: StatsBomb Open Data. '
