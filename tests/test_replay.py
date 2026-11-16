@@ -155,3 +155,16 @@ def test_lineups_restrict_named_players_to_starters_and_flag_missing_regulars():
     from pitchgraph.prematch.report import render_html
     html = render_html(rep, "T1", "Test League", "2020")
     assert "T1 without Full12" in html and "both sides start their regulars" in html
+
+
+def test_replay_carries_result_calls_from_our_side():
+    ev, matches = _league()
+    out = replay(ev, matches, team_id=1, start_fraction=0.5, kappa=10.0)
+    rows = [g["result_call"] for g in out["games"] if g.get("result_call")]
+    assert rows and out["summary"]["result_calls"]["n"] == len(rows)
+    for g in out["games"]:
+        rc = g.get("result_call")
+        if rc:
+            assert abs(sum(rc["chances"]) - 1) < 1e-9
+            won = g["score"][0] > g["score"][1]
+            assert rc["result"] == (0 if won else 2) and rc["points"] == (3 if won else 0)

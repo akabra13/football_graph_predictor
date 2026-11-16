@@ -74,6 +74,37 @@ def _lineup(lu, team, opp):
     return ('<p class="small"><b>Line-ups:</b> ' + "; ".join(parts) + ". Players named below all start today.</p>")
 
 
+def _result_call(rc, team, opp):
+    """Expected goals each way and the three chances, with what happened."""
+    if not rc:
+        return ""
+    labels = ("win", "draw", "loss")
+    xg_for, xg_against = rc["expected_goals"]
+    chances = ", ".join(
+        (f'<b>{name} {_pct(p)}</b>' if i == rc["result"] else f"{name} {_pct(p)}")
+        for i, (name, p) in enumerate(zip(labels, rc["chances"])))
+    return (f'<p class="small"><b>Before kick-off:</b> expected goals {escape(team)} {xg_for:.1f}, '
+            f'{escape(opp)} {xg_against:.1f}. Chances: {chances} (what happened in bold). '
+            f'Chance creation in the match: {rc["threat_actual"][0]:.1f} xG against {rc["threat_actual"][1]:.1f}.</p>')
+
+
+def _result_summary(r, team):
+    if not r:
+        return ""
+    we, they = r["threat"]["we"], r["threat"]["they"]
+    better = "better than" if r["rps"] < r["rps_base"] else "no better than"
+    return (f'<p>Result calls: the most likely result was the real one in <b>{r["top_pick_right"]} of {r["n"]}</b> '
+            f'games, and the chances scored {r["rps"]:.3f} against {r["rps_base"]:.3f} for the league\'s usual '
+            f'home, draw and away rates (lower is better, so {better} the usual rates). The chances added up to '
+            f'<b>{r["expected_points"]:.0f}</b> expected points; {escape(team)} took <b>{r["points"]}</b>.</p>'
+            f'<p>Threat calls: {escape(team)} were called to create {we["called"]:.1f} xG and created '
+            f'{we["actual"]:.1f}; opponents were called to create {they["called"]:.1f} and created '
+            f'{they["actual"]:.1f} (penalties excluded).</p>'
+            '<p class="small muted">Tested on 1,357 matches: the chances beat the usual rates by 18%, but are too '
+            'cautious at the ends. Results given over 60% happened 80% of the time, and results given under 20% '
+            'happened 9% of the time.</p>')
+
+
 def _strategy(lines):
     if not lines:
         return ('<h3>The plan</h3><p class="muted">Nothing about this match departs enough from the league to '
@@ -98,7 +129,8 @@ def _game(g, team):
         return head + '<p class="muted">Too few earlier matches for a plan.</p></div>'
     pl_ = p["players"]
     side = p["lever_side"]
-    body = _lineup(p.get("lineup"), team, g["opponent"]) + _strategy(g.get("strategy") or [])
+    body = (_result_call(g.get("result_call"), team, g["opponent"]) + _lineup(p.get("lineup"), team, g["opponent"])
+            + _strategy(g.get("strategy") or []))
     body += _calls_table(g["calls"], team, g["opponent"]) if g.get("calls") else ""
     body += (
         '<div class="cols"><div>'
@@ -149,7 +181,7 @@ def _summary(s, team):
         f'average was, over {s["games"]} games.</p>'
         + (f'<p>The plans gave <b>{s["strategy_lines"]}</b> instructions; for <b>{s["strategy_premises_held"]}</b> '
            f'of them the situation the instruction was written for did occur in the match.</p>'
-           if s.get("strategy_lines") else "") +
+           if s.get("strategy_lines") else "") + _result_summary(s.get("result_calls"), team) +
         '<div class="scroll"><table><tr><th>Call</th>'
         f'<th>{escape(team)}: closer</th><th>skill</th><th>Opponents: closer</th><th>skill</th></tr>'
         + "".join(rows) + "</table></div>"

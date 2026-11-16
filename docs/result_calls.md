@@ -38,3 +38,50 @@ The competition-seasons of the pooled replay. A team-match counts for the threat
 
 - Not a comparison with bookmakers, who use far more information and will be better. Beating base rates is the floor for showing a number, not a claim of an edge.
 - Not betting advice.
+
+## Result (2026-11-15, run exactly as registered): both calls HOLD; chances are too cautious at the extremes
+
+13 competition-seasons, 2,741 team-matches for the threat call, 1,357 matches for the result call.
+
+### Threat call
+
+| Fed with | Skill (90% CI) | Team only | Opponent adds | Closer than league |
+|---|---|---|---|---|
+| **xG** | **0.296** (0.268 to 0.323) | 0.210 | +0.086 | 60% |
+| Goals | 0.178 (0.150 to 0.204) | 0.125 | +0.053 | 59% |
+
+The threat call holds, about level with shots per possession (0.283) and slightly above what I expected. Goals themselves are much less knowable than chance creation, as they should be.
+
+### Result call
+
+Home win, draw and away win happened in 45%, 24% and 32% of matches.
+
+| Chances from | RPS | Gain over base rates (90% CI) | Relative | Most likely result was right |
+|---|---|---|---|---|
+| **xG (the registered call)** | **0.1896** | +0.0425 (+0.0370 to +0.0481) | 18% | 56% |
+| Goals | 0.1925 | +0.0395 | 17% | 54% |
+| Even blend | 0.1891 | +0.0430 | 19% | 55% |
+| Base rates | 0.2321 | 0 | 0% | 44% |
+
+- The result call holds, by much more than the 5% I expected. Part of that is the data: these leagues include very unequal ones (women's leagues, La Liga 2015/16), where strength gaps are large and easy to see.
+- xG-fed against goals-fed: +0.0030 (-0.0001 to +0.0060). xG is probably slightly better; the interval just touches 0.
+- Draws: given 23% on average, happened 24%. The known Poisson draw problem is small here.
+
+### Calibration
+
+| Chance given | Predictions | Average given | Happened |
+|---|---|---|---|
+| under 20% | 684 | 13.8% | 9.2% |
+| 20 to 30% | 1,598 | 25.0% | 25.6% |
+| 30 to 40% | 623 | 34.8% | 31.3% |
+| 40 to 50% | 488 | 44.8% | 47.1% |
+| 50 to 60% | 347 | 54.6% | 56.8% |
+| over 60% | 331 | 72.0% | 79.5% |
+
+Worst gap 7.5 points, above the 5-point line. **The chances are too cautious at both ends:** strong favourites win more often than stated (80% against 72%) and long shots come in less often (9% against 14%). The cause is the shrinkage: 5 pseudo-matches pull every team toward the league, which is right for a single call's squared error but leaves strength gaps understated. By the registered rule, plans show the chances with this stated.
+
+### Decision
+
+- Plans show expected goals for both sides and the three chances, with the note that big favourites are understated.
+- Not done: re-tuning the shrinkage to fix calibration. That would be fitting on the data just used for the test; it needs its own registered test on held-out seasons.
+- Not done: any comparison with bookmaker odds.

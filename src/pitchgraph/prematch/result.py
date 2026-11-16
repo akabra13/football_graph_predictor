@@ -144,3 +144,37 @@ def evaluate(seasons: list[dict], n_boot: int = 500, seed: int = 0) -> dict:
                                              default=float("nan")))
     res["result_call_holds"] = bool(res["models"]["xg"]["gain_ci"][0] > 0)
     return res
+
+
+def for_team(m: dict | None, home: bool) -> dict | None:
+    """One match's calls seen from one side: [for, against] and [win, draw, loss]."""
+    if m is None:
+        return None
+    side = (lambda v: [v[0], v[1]]) if home else (lambda v: [v[1], v[0]])
+    flip = (lambda p: list(p)) if home else (lambda p: list(p)[::-1])
+    p, base = np.array(flip(m["p"]["xg"])), np.array(flip(m["p"]["base"]))
+    result = m["outcome"] if home else 2 - m["outcome"]
+    return {"expected_goals": side(m["lam"]["xg"]), "threat_call": side(m["threat"]), "threat_actual": side(m["xg"]),
+            "threat_league": m["threat_league"], "chances": p.tolist(), "base": base.tolist(), "result": int(result),
+            "rps": rps(p, result), "rps_base": rps(base, result),
+            "expected_points": float(3 * p[0] + p[1]), "points": [3, 1, 0][result]}
+
+
+def summarise_team(rows: list[dict]) -> dict | None:
+    """A team's result and threat calls over its replayed games."""
+    if not rows:
+        return None
+    out = {"n": len(rows), "rps": float(np.mean([r["rps"] for r in rows])),
+           "rps_base": float(np.mean([r["rps_base"] for r in rows])),
+           "top_pick_right": int(sum(int(np.argmax(r["chances"])) == r["result"] for r in rows)),
+           "expected_points": float(sum(r["expected_points"] for r in rows)),
+           "points": int(sum(r["points"] for r in rows)), "threat": {}}
+    for i, who in enumerate(("we", "they")):
+        a = np.array([r["threat_actual"][i] for r in rows])
+        c = np.array([r["threat_call"][i] for r in rows])
+        lg = np.array([r["threat_league"] for r in rows])
+        sse0 = float(((lg - a) ** 2).sum())
+        out["threat"][who] = {"closer_than_league": int((np.abs(c - a) < np.abs(lg - a)).sum()),
+                              "skill": 1 - float(((c - a) ** 2).sum()) / sse0 if sse0 > 0 else None,
+                              "called": float(c.sum()), "actual": float(a.sum())}
+    return out

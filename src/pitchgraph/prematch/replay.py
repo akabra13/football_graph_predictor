@@ -33,7 +33,7 @@ from pitchgraph.chains.denial_test import region_links
 from pitchgraph.chains.team import Chain, league_chain, shrunk_chain
 from pitchgraph.chains.validate import _crossing_lanes, _observed_lanes
 from pitchgraph.graphs.routes import LANE_EDGES
-from pitchgraph.prematch import lineups, strategy
+from pitchgraph.prematch import lineups, result, strategy
 from pitchgraph.prematch.audit import PSEUDO, season_table
 
 KAPPA = 1000.0
@@ -326,6 +326,7 @@ def replay(ev: pl.DataFrame, matches: pl.DataFrame, team_id: int, names: dict | 
     dates = {m: str(r["match_date"]) for m, r in info.items()}
     mine = sorted((m for m, r in info.items() if team_id in (r["home_team_id"], r["away_team_id"])),
                   key=lambda m: (dates[m], m))
+    rcalls = result.result_calls(result.result_table(ev, matches), dates, start_fraction)["matches"]
     games = []
     for mid in mine[int(len(mine) * start_fraction):]:
         r = info[mid]
@@ -342,6 +343,7 @@ def replay(ev: pl.DataFrame, matches: pl.DataFrame, team_id: int, names: dict | 
             game["calls"] = calls_for(ftable, team_id, them, mid, prior)
             game["strategy"] = strategy.lines(game["calls"], p["players"], game["opponent"],
                                               {f: fmt for f, _, fmt in CALLS})
+            game["result_call"] = result.for_team(rcalls.get(int(mid)), bool(home))
         games.append(game)
     return {"team_id": int(team_id), "games": games, "summary": summarise(games)}
 
@@ -368,6 +370,7 @@ def summarise(games: list[dict]) -> dict:
             out["calls"][who][feature] = {"n": len(rows), "closer_than_league": hits,
                                           "skill": 1 - sse / sse0 if sse0 > 0 else None}
     out["calls_closer"], out["calls_total"] = closer, total
+    out["result_calls"] = result.summarise_team([g["result_call"] for g in done if g.get("result_call")])
     fired = [s for g in done for s in g.get("strategy", []) if s["premise_held"] is not None]
     out["strategy_lines"] = len(fired)
     out["strategy_premises_held"] = int(sum(s["premise_held"] for s in fired))
