@@ -177,3 +177,35 @@ By the arithmetic of the calls, the first departure is what this opponent does t
 - Fire rates lower than before (5 to 15% each), because opponent effects are small next to team style.
 - Possession rules hold comfortably (the opponent adds as much as the team there). The pressing rules hold. Shots, long balls and corners are doubtful, around 55 to 62%.
 - I expect 10 to 14 of the 18 to hold.
+
+### Result (2026-11-16, run exactly as registered): 18 of 18 rules hold; plans are rebuilt on them
+
+2,741 team-matches. "When not fired" is how often the same situation occurred in games where the rule did not fire.
+
+| Rule | Fires | In % of games | Situation occurred (90% CI) | When not fired |
+|---|---|---|---|---|
+| less_ball | 679 | 25% | **89%** (87 to 91%) | 37% |
+| more_ball | 547 | 20% | **88%** (86 to 91%) | 41% |
+| centre_tighter | 312 | 11% | **86%** (82 to 89%) | 51% |
+| they_come_central | 460 | 17% | **82%** (79 to 84%) | 35% |
+| they_are_readable | 472 | 17% | **80%** (77 to 83%) | 41% |
+| centre_looser | 329 | 12% | **78%** (74 to 81%) | 41% |
+| fewer_shots | 358 | 13% | **77%** (74 to 81%) | 50% |
+| leave_them | 362 | 13% | **77%** (73 to 80%) | 48% |
+| pinned_back | 279 | 10% | **76%** (72 to 81%) | 46% |
+| sloppier | 329 | 12% | **75%** (71 to 79%) | 40% |
+| they_go_long | 519 | 19% | **74%** (71 to 77%) | 39% |
+| they_regain_high | 413 | 15% | **74%** (71 to 78%) | 45% |
+| more_corners_against | 298 | 11% | **72%** (67 to 76%) | 42% |
+| pressed_deep | 417 | 15% | **71%** (67 to 74%) | 44% |
+| more_shots | 257 | 9% | **68%** (64 to 73%) | 44% |
+| forced_long | 245 | 9% | **67%** (62 to 72%) | 44% |
+| press_them | 266 | 10% | **64%** (59 to 68%) | 46% |
+| win_more_corners | 227 | 8% | **63%** (58 to 69%) | 44% |
+
+- **All 18 clear the bar**, more than the 10 to 14 I expected. Shots, long balls and corners, which I doubted, hold at 63 to 77%.
+- **An opponent's effect on a team is real and knowable.** Measured against a team's own usual, the situation occurs 63 to 89% of the time when called and 35 to 51% when not.
+- **Weakest:** "press them" (64%) and "win more corners" (63%); both intervals start below 60%. About one time in three the situation does not arrive.
+- **Fire rates were higher than I expected** (8 to 25%, not 5 to 15%), so a typical game has more than four candidate lines and the cap of four decides what is shown.
+- By the decision rule the plans now show these lines, at most four, strongest first. The league-based rules above, and the four league-based set-piece rules in docs/set_pieces.md, are no longer shown in plans.
+- Unchanged limit: a held premise means the situation occurred, not that the instruction works.

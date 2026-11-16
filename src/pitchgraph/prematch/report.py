@@ -120,7 +120,7 @@ def _set_pieces(g, team, opp):
     calls, pl_ = g.get("set_piece_calls"), g.get("set_piece_players")
     if not calls or not pl_:
         return ""
-    return ("<h3>Set pieces</h3>" + _sp_lines(g.get("set_piece_strategy") or []) + _calls_table(calls, team, opp, SP_CALLS).split('<p class="small muted">')[0]
+    return ("<h3>Set pieces</h3>" + _calls_table(calls, team, opp, SP_CALLS).split('<p class="small muted">')[0]
             + f'<p class="small">Their corners are taken by {_names(pl_["their_takers"])}; their shots from set '
             f'pieces come from <b>{_names(pl_["their_shooters"])}</b>. Ours are taken by '
             f'{_names(pl_["our_takers"])} and finished by <b>{_names(pl_["our_shooters"])}</b>.</p>')
@@ -141,8 +141,8 @@ def _set_piece_summary(sp, team):
 
 def _strategy(lines):
     if not lines:
-        return ('<h3>The plan</h3><p class="muted">Nothing about this match departs enough from the league to '
-                "build an instruction on. Play your normal game.</p>")
+        return ('<h3>The plan for this opponent</h3><p class="muted">Nothing about this opponent departs enough '
+                "from a normal week to build an instruction on. Play your normal game.</p>")
     items = []
     for s in lines:
         mark = ""
@@ -150,7 +150,7 @@ def _strategy(lines):
             mark = (' <span class="good">✓ the situation occurred</span>' if s["premise_held"]
                     else ' <span class="bad">✗ it did not</span>')
         items.append(f"<li>{escape(s['text'])}{mark}</li>")
-    return "<h3>The plan</h3><ol style='margin:4px 0 10px;padding-left:20px;line-height:1.5'>" + "".join(items) + "</ol>"
+    return "<h3>The plan for this opponent</h3><ol style='margin:4px 0 10px;padding-left:20px;line-height:1.5'>" + "".join(items) + "</ol>"
 
 
 def _game(g, team):
@@ -238,7 +238,8 @@ def render_html(rep: dict, team: str, competition: str, season: str) -> str:
         'earlier opponents did against this opponent. Lane-by-lane entry calls were dropped: the audit found them '
         'the least knowable item tested.</p><p><span class="tag info">What is not claimed</span> A replay shows '
         'what the tool would have said. It cannot show what would have happened had the team acted on it. Each '
-        'instruction in a plan is football judgement resting on one call; the tick shows whether that call\'s '
+        'instruction in a plan is football judgement resting on one call that differs from a normal week for the '
+        'team (its own usual, or what its opponents usually do against it); the tick shows whether that '
         'situation occurred, not whether the instruction worked. Player '
         'lists describe who has done the job so far, not who should.</p></div>'
         + _summary(rep["summary"], team) + games +

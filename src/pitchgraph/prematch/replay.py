@@ -379,14 +379,15 @@ def replay(ev: pl.DataFrame, matches: pl.DataFrame, team_id: int, names: dict | 
         if p is not None and mid in asof.per_match:
             game["outcome"] = outcome(asof, team_id, them, mid, prior, p)
             game["calls"] = calls_for(ftable, team_id, them, mid, prior)
-            game["strategy"] = strategy.lines(game["calls"], p["players"], game["opponent"],
-                                              {f: fmt for f, _, fmt in CALLS})
             game["set_piece_calls"] = calls_for(sptable, team_id, them, mid, prior, [f for f, _, _ in SP_CALLS])
             game["set_piece_players"] = setpiece_players(ev, prior, team_id, them, names, (xi or {}).get((int(mid), team_id)),
                                                          (xi or {}).get((int(mid), them)))
-            game["set_piece_strategy"] = strategy.lines(game["set_piece_calls"], game["set_piece_players"],
-                                                          game["opponent"], {f: fmt for f, _, fmt in SP_CALLS},
-                                                          strategy.SP_RULES)
+            # instructions about this game: every call against a normal week for the team
+            both = {w: {**game["calls"][w], **game["set_piece_calls"][w]} for w in ("we", "they")}
+            game["strategy"] = strategy.lines(
+                both, {**p["players"], **game["set_piece_players"]}, game["opponent"],
+                {f: fmt for f, _, fmt in CALLS + SP_CALLS}, strategy.GAME_RULES, "usual",
+                strategy.GAME_THRESHOLD)
             game["result_call"] = result.for_team(rcalls.get(int(mid)), bool(home))
         games.append(game)
     return {"team_id": int(team_id), "games": games, "summary": summarise(games)}
@@ -416,8 +417,7 @@ def summarise(games: list[dict]) -> dict:
     out["calls_closer"], out["calls_total"] = closer, total
     out["set_pieces"] = summarise_calls(done, "set_piece_calls", [f for f, _, _ in SP_CALLS])
     out["result_calls"] = result.summarise_team([g["result_call"] for g in done if g.get("result_call")])
-    fired = [s for g in done for s in g.get("strategy", []) + g.get("set_piece_strategy", [])
-             if s["premise_held"] is not None]
+    fired = [s for g in done for s in g.get("strategy", []) if s["premise_held"] is not None]
     out["strategy_lines"] = len(fired)
     out["strategy_premises_held"] = int(sum(s["premise_held"] for s in fired))
     by_rule = {}
