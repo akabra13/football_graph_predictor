@@ -45,6 +45,22 @@ RULES = [
      "routes repeat, so sit on them."),
 ]
 
+# Set-piece rules: same form, tested separately (docs/set_pieces.md).
+SP_RULES = [
+    ("defend_corners", "they", "corners", +1,
+     "Expect a lot of corners to defend: {p} called for {opp} (league {l}). Deliveries come from "
+     "{their_takers}; their set-piece shots come from {their_shooters}."),
+    ("win_corners", "we", "corners", +1,
+     "You should win corners today: {p} called (league {l}). Have the routines ready: {our_takers} "
+     "deliver, {our_shooters} attack them."),
+    ("defend_set_pieces", "they", "sp_shots", +1,
+     "{opp} are called to get {p} shots from set pieces (league {l}). No cheap fouls or corners in your "
+     "own half; pick up {their_shooters}."),
+    ("attack_set_pieces", "we", "sp_shots", +1,
+     "Set pieces are a route to goal today: {p} shots from them called (league {l}). Get {our_takers} "
+     "on the dead balls and {our_shooters} into the box."),
+]
+
 
 def departure(call: dict, direction: int) -> float | None:
     """How many league standard deviations the call sits from the league mean, in the rule's direction."""
@@ -58,10 +74,10 @@ def _names(rows: list[dict]) -> str:
     return ", ".join(str(r["name"]) for r in rows) or "no one identified yet"
 
 
-def lines(calls: dict, players: dict, opponent: str, formats: dict) -> list[dict]:
+def lines(calls: dict, players: dict, opponent: str, formats: dict, rules=None) -> list[dict]:
     """The strategy lines that fire for one game, strongest departure first."""
     out = []
-    for rule, who, feature, direction, template in RULES:
+    for rule, who, feature, direction, template in (RULES if rules is None else rules):
         call = calls.get(who, {}).get(feature)
         if call is None:
             continue

@@ -60,3 +60,19 @@ If only corners and free kicks hold, the honest set-piece section of a plan is s
 - The three calls for both sides, scored after the match like every other call.
 - Who takes each side's corners and who shoots from set pieces, from earlier matches, starters only.
 - **No instruction is built on these yet.** An instruction needs its own premise test (docs/strategy.md), and nothing here says how to defend a set piece, only how many to expect and from whom.
+
+## Pre-registered: set-piece instructions (written 2026-11-16, before running)
+
+Same idea and same test as the open-play strategy lines (docs/strategy.md): an instruction rests on one call that departs at least 0.5 league standard deviations from the league mean, and its premise is checked by whether the real value landed on the called side of the league mean.
+
+| Rule | Premise: call at least 0.5 SD above league | Instruction |
+|---|---|---|
+| defend_corners | their corners | Expect many corners to defend; named takers and targets |
+| win_corners | our corners | You will win corners; rehearse them, named takers and targets |
+| defend_set_pieces | their shots from set pieces | Cut out cheap fouls and corners; named targets |
+| attack_set_pieces | our shots from set pieces | Set pieces are a route to goal today; named targets |
+
+- **Units, threshold, score and bar per rule:** exactly as docs/strategy.md. A premise holds if it occurs in at least 60% of the games where the rule fires, with the 90% interval above 50%, and the rule fires at least 100 times.
+- **Decision rule:** each rule is judged alone. Only rules that hold go into plans.
+- **Stated expectation:** closer to the line than the open-play rules (which held 76 to 94%), because these calls are weaker. Corners rules around 65 to 70%; set-piece shot rules around 60 to 65%, and one of them may fail.
+- As before, a held premise means the situation occurred, not that the instruction works.

@@ -127,3 +127,13 @@ def test_lineup_weighted_call_follows_the_matching_lineup():
     same = {k: a for k in xi}
     p2 = asof_arrays(pl.DataFrame(rows), dates, ["f"], xi=same)
     assert np.allclose(p2["call"][p2["scored"]], p2["call_xi"][p2["scored"]])
+
+
+def test_premise_test_finds_a_real_team_effect_and_not_noise():
+    from pitchgraph.prematch.pooled import premise_test
+    table, dates = _table(team_effect=2.0, rounds=6)
+    p = asof_arrays(table, dates, ["f", "g"])
+    rules = [("real", "we", "f", +1, ""), ("noise", "we", "g", +1, "")]
+    out = premise_test([p], ["f", "g"], rules, 0.5, min_fires=20, n_boot=100)
+    assert out["real"]["holds"] and out["real"]["held_share"] > 0.8
+    assert not out["noise"]["holds"]

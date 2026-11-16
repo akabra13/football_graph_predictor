@@ -72,4 +72,5 @@ jobs:
             result_calls.json
             calibration_test.json
             setpiece_audit.json
+            setpiece_premises.json
           if-no-files-found: ignore

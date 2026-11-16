@@ -179,3 +179,36 @@ def skill_difference(parts: list[dict], k: int, n_boot: int = 500, seed: int = 0
     lo, hi = float(np.percentile(d, 5)), float(np.percentile(d, 95))
     return {"n": int(len(a)), "skill_plain": float(plain), "skill_lineup": float(with_xi),
             "difference": float(with_xi - plain), "ci": [lo, hi], "helped": bool(lo > 0), "hurt": bool(hi < 0)}
+
+
+def premise_test(parts: list[dict], feats: list[str], rules: list, threshold: float, min_fires: int = 100,
+                 pass_share: float = 0.60, n_boot: int = 500, seed: int = 0) -> dict:
+    """Per rule: how often it fires and how often its situation then occurred,
+    with a 90% interval by resampling whole matches (docs/strategy.md)."""
+    rng = np.random.default_rng(seed)
+    out = {}
+    for rule, who, feature, direction, _ in rules:
+        fired, held, keys = [], [], []
+        for i, p in enumerate(parts):
+            f, h, m = premise_rows(p, feats.index(feature), who, direction, threshold)
+            fired.append(f); held.append(h); keys.append(np.array([f"{i}_{x}" for x in m]))
+        fired, held, keys = (np.concatenate(v) for v in (fired, held, keys))
+        n = int(fired.sum())
+        o = {"who": who, "feature": feature, "direction": direction, "fires": n,
+             "fire_rate": float(fired.mean()) if len(fired) else 0.0, "judged": bool(n >= min_fires), "holds": False}
+        if n:
+            uniq, inv = np.unique(keys, return_inverse=True)
+            hit_m = np.bincount(inv, weights=(fired & held).astype(float), minlength=len(uniq))
+            n_m = np.bincount(inv, weights=fired.astype(float), minlength=len(uniq))
+            boots = []
+            for _ in range(n_boot):
+                w = np.bincount(rng.integers(0, len(uniq), len(uniq)), minlength=len(uniq))
+                if (w * n_m).sum() > 0:
+                    boots.append((w * hit_m).sum() / (w * n_m).sum())
+            share = float(held[fired].mean())
+            lo, hi = float(np.percentile(boots, 5)), float(np.percentile(boots, 95))
+            o.update(held_share=share, ci=[lo, hi],
+                     not_fired_share=float(held[~fired].mean()) if (~fired).any() else None,
+                     holds=bool(n >= min_fires and share >= pass_share and lo > 0.5))
+        out[rule] = o
+    return out
