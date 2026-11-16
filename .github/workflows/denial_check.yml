@@ -73,4 +73,5 @@ jobs:
             calibration_test.json
             setpiece_audit.json
             setpiece_premises.json
+            game_premises.json
           if-no-files-found: ignore

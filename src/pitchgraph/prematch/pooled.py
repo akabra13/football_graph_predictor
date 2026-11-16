@@ -130,7 +130,7 @@ def team_shares(parts: list[dict], cols: list[int], min_games: int = 8) -> list[
     return out
 
 
-def premise_rows(p: dict, k: int, who: str, direction: int, threshold: float):
+def premise_rows(p: dict, k: int, who: str, direction: int, threshold: float, reference: str = "league"):
     """For feature column k of one season's `asof_arrays`: per scored unit,
     whether a rule on that feature fires and whether its situation occurred.
 
@@ -145,10 +145,16 @@ def premise_rows(p: dict, k: int, who: str, direction: int, threshold: float):
     ok = p["scored"] & (idx >= 0)
     src = np.where(idx >= 0, idx, 0)
     call, league, sd, actual = (p[name][src, k] for name in ("call", "league", "league_sd", "actual"))
+    ref = league
+    if reference == "usual":
+        # a normal week for the unit's team: its own usual for its own numbers; for the
+        # opponent's numbers, what opponents usually do against it (call - own + league)
+        own = p["own"][src, k]
+        ref = own if who == "we" else call - own + league
     ok &= np.isfinite(call) & np.isfinite(league) & np.isfinite(actual) & np.isfinite(sd) & (sd > 0)
     with np.errstate(invalid="ignore", divide="ignore"):
-        fired = direction * (call - league) / sd >= threshold
-        held = direction * (actual - league) > 0
+        fired = direction * (call - ref) / sd >= threshold
+        held = direction * (actual - ref) > 0
     return fired[ok], held[ok], p["match"][ok]
 
 
@@ -182,7 +188,7 @@ def skill_difference(parts: list[dict], k: int, n_boot: int = 500, seed: int = 0
 
 
 def premise_test(parts: list[dict], feats: list[str], rules: list, threshold: float, min_fires: int = 100,
-                 pass_share: float = 0.60, n_boot: int = 500, seed: int = 0) -> dict:
+                 pass_share: float = 0.60, n_boot: int = 500, seed: int = 0, reference: str = "league") -> dict:
     """Per rule: how often it fires and how often its situation then occurred,
     with a 90% interval by resampling whole matches (docs/strategy.md)."""
     rng = np.random.default_rng(seed)
@@ -190,7 +196,7 @@ def premise_test(parts: list[dict], feats: list[str], rules: list, threshold: fl
     for rule, who, feature, direction, _ in rules:
         fired, held, keys = [], [], []
         for i, p in enumerate(parts):
-            f, h, m = premise_rows(p, feats.index(feature), who, direction, threshold)
+            f, h, m = premise_rows(p, feats.index(feature), who, direction, threshold, reference)
             fired.append(f); held.append(h); keys.append(np.array([f"{i}_{x}" for x in m]))
         fired, held, keys = (np.concatenate(v) for v in (fired, held, keys))
         n = int(fired.sum())

@@ -137,3 +137,17 @@ def test_premise_test_finds_a_real_team_effect_and_not_noise():
     out = premise_test([p], ["f", "g"], rules, 0.5, min_fires=20, n_boot=100)
     assert out["real"]["holds"] and out["real"]["held_share"] > 0.8
     assert not out["noise"]["holds"]
+
+
+def test_usual_reference_removes_the_teams_own_level():
+    from pitchgraph.prematch.pooled import premise_rows
+    from pitchgraph.prematch.strategy import departure, reference_value
+    table, dates = _table(team_effect=3.0, rounds=6)
+    p = asof_arrays(table, dates, ["f", "g"])
+    league_fired, _, _ = premise_rows(p, 0, "we", +1, 0.5)
+    usual_fired, _, _ = premise_rows(p, 0, "we", +1, 0.5, "usual")
+    assert league_fired.mean() > 0.2 and usual_fired.mean() < league_fired.mean()   # no opponent effect in the toy
+    call = {"predicted": 0.60, "own": 0.58, "league": 0.50, "league_sd": 0.05}
+    assert reference_value(call, "we", "usual") == 0.58
+    assert abs(reference_value(call, "they", "usual") - 0.52) < 1e-12
+    assert abs(departure(call, +1, "we", "usual") - 0.4) < 1e-9 and abs(departure(call, +1) - 2.0) < 1e-9

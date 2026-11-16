@@ -130,3 +130,50 @@ Run to see whether the plan reads as well for a possession side as for Leicester
 - **Corners over-called:** 113 called for Barcelona, 95 taken.
 
 **What this points to:** instructions should rest on how this game differs from the team's own usual, not from the league. That is a new set of premises and needs its own registered test.
+
+
+## Pre-registered: instructions about this game, not about the team (written 2026-11-16, before running)
+
+**Problem.** Every rule above compares a call with the league average, so a side with an extreme style gets the same lines every week (Barcelona: three lines were 53 of 82 instructions).
+
+**Change.** A rule now compares a call with **a normal week for this team**:
+
+- For our own numbers, the reference is **our usual**: our earlier matches, shrunk to the league as always.
+- For the opponent's numbers, the reference is **what opponents usually do against us**: the earlier matches of teams playing us, shrunk the same way.
+
+By the arithmetic of the calls, the first departure is what this opponent does to teams, and the second is how this opponent's own habits differ from the league. Neither contains our own constant style, so a line can only fire for something about this opponent.
+
+- A line **fires** when the call is at least **0.4 league standard deviations** from the reference in the rule's direction. (Lower than the 0.5 used above because opponent effects are smaller than team-versus-league gaps. Fixed now, not tuned.)
+- Its **premise holds** in a match if the real value landed on the called side of the reference.
+- Same units, same bar per rule as above: fires at least 100 times, premise occurs in at least 60% of those, 90% interval above 50%.
+
+### The rules (fixed now)
+
+| Rule | Whose number, against which reference | Direction |
+|---|---|---|
+| less_ball / more_ball | our share of the ball v our usual | below / above |
+| pressed_deep | our own-third giveaway share v our usual | above |
+| sloppier | our giveaways per action v our usual | above |
+| centre_tighter / centre_looser | our central entries per possession v our usual | below / above |
+| fewer_shots / more_shots | our shots per possession v our usual | below / above |
+| forced_long | our long forward share v our usual | above |
+| pinned_back | where our possessions start v our usual | below |
+| win_more_corners | our corners v our usual | above |
+| press_them | their own-third giveaway share v our usual opponents | above |
+| leave_them | the same | below |
+| they_go_long | their long forward share v our usual opponents | above |
+| they_come_central | their central entries per possession v our usual opponents | above |
+| they_regain_high | where their possessions start v our usual opponents | above |
+| they_are_readable | their entropy rate v our usual opponents | below |
+| more_corners_against | their corners v our usual opponents | above |
+
+### Decision rule
+
+- Each rule is judged alone. Rules that hold replace the league-based lines in the plans; a plan shows at most four, strongest first. The league-based rules stay documented above.
+- If fewer than six rules hold, the plans keep the league-based lines and this is reported as a failed rebuild.
+
+### Stated expectations
+
+- Fire rates lower than before (5 to 15% each), because opponent effects are small next to team style.
+- Possession rules hold comfortably (the opponent adds as much as the team there). The pressing rules hold. Shots, long balls and corners are doubtful, around 55 to 62%.
+- I expect 10 to 14 of the 18 to hold.
