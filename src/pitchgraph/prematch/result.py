@@ -4,6 +4,7 @@ Design, bars and reading rules: docs/result_calls.md.
 """
 from __future__ import annotations
 
+import hashlib
 import math
 
 import numpy as np
@@ -15,6 +16,13 @@ FEATS = ["xg", "goals", "goals_home", "goals_away", "home_win", "draw", "away_wi
 MODELS = ("xg", "goals", "blend", "base")
 FLOOR = 0.05                      # a call can go slightly negative; goals cannot
 BINS = [0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 1.0001]
+STRETCH = 1.0                     # see docs/result_calls.md (calibration fix)
+GRID = [round(1.0 + 0.1 * i, 1) for i in range(11)]
+
+
+def is_lockbox(key: str) -> bool:
+    """Held-out competition-seasons for the calibration fix: fixed by a hash of the key."""
+    return int(hashlib.md5(key.encode()).hexdigest(), 16) % 2 == 0
 
 
 def result_table(ev, matches: pl.DataFrame) -> pl.DataFrame:
@@ -62,14 +70,16 @@ def rps(p: np.ndarray, outcome: int) -> float:
     return float(((np.cumsum(p)[:2] - np.cumsum(o)[:2]) ** 2).sum() / 2.0)
 
 
-def result_calls(table: pl.DataFrame, dates: dict, start_fraction: float = 0.5) -> dict:
+def result_calls(table: pl.DataFrame, dates: dict, start_fraction: float = 0.5, stretch: float | None = None,
+                 arrays: dict | None = None) -> dict:
     """Every match of one season with a usable call.
 
     Returns `arrays` (the `asof_arrays` of the table, for the threat call's
     skill) and `matches`: {match_id: {home_id, away_id, lam: {model: (home, away)},
     p: {model: [home, draw, away]}, xg, outcome, scored}}.
     """
-    A = asof_arrays(table, dates, FEATS, start_fraction=start_fraction)
+    stretch = STRETCH if stretch is None else stretch
+    A = arrays if arrays is not None else asof_arrays(table, dates, FEATS, start_fraction=start_fraction)
     k = {f: i for i, f in enumerate(FEATS)}
     home = table["home"].to_numpy()
     rows: dict = {}
@@ -87,7 +97,8 @@ def result_calls(table: pl.DataFrame, dates: dict, start_fraction: float = 0.5) 
             continue
         hf, af = lg[k["goals_home"]] / lg[k["goals"]], lg[k["goals_away"]] / lg[k["goals"]]
         ratio = lg[k["goals"]] / lg[k["xg"]]
-        lam = {"xg": (max(A["call"][h, k["xg"]], FLOOR) * ratio * hf, max(A["call"][a, k["xg"]], FLOOR) * ratio * af),
+        th, ta = (lg[k["xg"]] + stretch * (A["call"][r, k["xg"]] - lg[k["xg"]]) for r in (h, a))
+        lam = {"xg": (max(th, FLOOR) * ratio * hf, max(ta, FLOOR) * ratio * af),
                "goals": (max(A["call"][h, k["goals"]], FLOOR) * hf, max(A["call"][a, k["goals"]], FLOOR) * af)}
         lam["blend"] = tuple((x + g) / 2.0 for x, g in zip(lam["xg"], lam["goals"]))
         p = {name: outcome_chances(*lam[name]) for name in ("xg", "goals", "blend")}
@@ -103,6 +114,44 @@ def result_calls(table: pl.DataFrame, dates: dict, start_fraction: float = 0.5) 
                   "outcome": 0 if gh > ga else 1 if gh == ga else 2,
                   "scored": bool(A["scored"][h] and A["scored"][a])}
     return {"arrays": A, "matches": out}
+
+
+def calibration(P: np.ndarray, o: np.ndarray, min_n: int = 100):
+    """Chances in bins against how often those outcomes happened; and the
+    worst gap among bins with at least `min_n` predictions."""
+    hit = np.zeros_like(P)
+    hit[np.arange(len(o)), o] = 1.0
+    cal = []
+    for lo, hi in zip(BINS[:-1], BINS[1:]):
+        sel = (P >= lo) & (P < hi)
+        if sel.any():
+            cal.append({"from": lo, "to": min(hi, 1.0), "n": int(sel.sum()),
+                        "predicted": float(P[sel].mean()), "happened": float(hit[sel].mean())})
+    worst = float(max((abs(c["predicted"] - c["happened"]) for c in cal if c["n"] >= min_n), default=float("nan")))
+    return cal, worst
+
+
+def scored_rps(seasons: list[dict]):
+    """(RPS per scored match, chances, outcomes) for the xG-fed call, in a fixed order."""
+    ms = [m for s in seasons for _, m in sorted(s["matches"].items()) if m["scored"]]
+    o = np.array([m["outcome"] for m in ms], dtype=int)
+    P = np.array([m["p"]["xg"] for m in ms]).reshape(len(ms), 3)
+    return np.array([rps(p, y) for p, y in zip(P, o)]), P, o
+
+
+def compare(plain: list[dict], stretched: list[dict], n_boot: int = 500, seed: int = 0) -> dict:
+    """The same matches scored with and without the stretch."""
+    r0, P0, o = scored_rps(plain)
+    r1, P1, _ = scored_rps(stretched)
+    gain = r0 - r1
+    draws = np.random.default_rng(seed).integers(0, len(o), (n_boot, len(o)))
+    b = gain[draws].mean(1)
+    cal0, worst0 = calibration(P0, o)
+    cal1, worst1 = calibration(P1, o)
+    return {"n": int(len(o)), "rps_plain": float(r0.mean()), "rps_stretched": float(r1.mean()),
+            "gain": float(gain.mean()), "gain_ci": [float(np.percentile(b, 5)), float(np.percentile(b, 95))],
+            "calibration_plain": cal0, "worst_gap_plain": worst0,
+            "calibration_stretched": cal1, "worst_gap_stretched": worst1}
 
 
 def evaluate(seasons: list[dict], n_boot: int = 500, seed: int = 0) -> dict:
@@ -131,17 +180,7 @@ def evaluate(seasons: list[dict], n_boot: int = 500, seed: int = 0) -> dict:
             "mean_chances": P[n].mean(0).tolist()}
     d = R["goals"] - R["xg"]
     res["xg_over_goals"] = {"gain": float(d.mean()), "ci": ci(d[draws].mean(1))}
-    hit = np.zeros_like(P["xg"])
-    hit[np.arange(len(o)), o] = 1.0
-    cal = []
-    for lo, hi in zip(BINS[:-1], BINS[1:]):
-        sel = (P["xg"] >= lo) & (P["xg"] < hi)
-        if sel.any():
-            cal.append({"from": lo, "to": min(hi, 1.0), "n": int(sel.sum()),
-                        "predicted": float(P["xg"][sel].mean()), "happened": float(hit[sel].mean())})
-    res["calibration"] = cal
-    res["calibration_worst_gap"] = float(max((abs(c["predicted"] - c["happened"]) for c in cal if c["n"] >= 100),
-                                             default=float("nan")))
+    res["calibration"], res["calibration_worst_gap"] = calibration(P["xg"], o)
     res["result_call_holds"] = bool(res["models"]["xg"]["gain_ci"][0] > 0)
     return res
 

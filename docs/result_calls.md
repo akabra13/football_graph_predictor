@@ -85,3 +85,24 @@ Worst gap 7.5 points, above the 5-point line. **The chances are too cautious at 
 - Plans show expected goals for both sides and the three chances, with the note that big favourites are understated.
 - Not done: re-tuning the shrinkage to fix calibration. That would be fitting on the data just used for the test; it needs its own registered test on held-out seasons.
 - Not done: any comparison with bookmaker odds.
+
+## Pre-registered: fixing the too-cautious chances (written 2026-11-16, before running)
+
+**The fix, one number.** Before the threat calls are turned into chances, each side's departure from the league average is stretched: threat used = league + s x (threat call - league), with s at least 1. Nothing else changes. The threat call shown in plans and its skill are untouched; only the chances move.
+
+**Held-out design.**
+
+- Each competition-season is assigned by a hash of its key ("competitionid_seasonid"): md5 as a number, even = lockbox, odd = tuning. Fixed by the hash, not by me.
+- s is chosen on the tuning seasons only, from the grid 1.0, 1.1, ..., 2.0, as the value with the lowest RPS.
+- The lockbox seasons are then scored once with that s, against s = 1.
+
+**Bars, on the lockbox only.**
+
+1. **Sharper:** RPS with the chosen s is below RPS with s = 1, with the 90% interval of the difference above 0 (resampling whole matches 500 times).
+2. **Calibrated:** no bin with at least 100 predictions is off by more than 5 points.
+
+**Decision rule.** Plans adopt s only if bar 1 passes. The "too cautious" note in plans is removed only if bar 2 also passes. If the chosen s is 1.0, or the lockbox has fewer than 300 matches, nothing changes and the result is reported as it is.
+
+**Disclosure.** The problem itself was seen on all 13 seasons, lockbox included, so the direction of the fix is not blind. Its size is.
+
+**Stated expectation:** s between 1.2 and 1.5; bar 1 passes narrowly; bar 2 uncertain, because the lockbox bins are small.

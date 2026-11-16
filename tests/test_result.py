@@ -79,3 +79,18 @@ def test_real_strength_gaps_beat_base_rates():
     assert res["models"]["base"]["gain_over_base"] == 0
     assert res["result_call_holds"] and res["models"]["xg"]["gain_over_base"] > 0.01
     assert abs(sum(res["models"]["xg"]["mean_chances"]) - 1) < 1e-9
+
+
+def test_stretch_widens_the_chances_and_one_leaves_them_alone():
+    from pitchgraph.prematch.result import compare, is_lockbox
+    ev, ms, dates = _season()
+    table = result_table(ev, ms)
+    plain, same, wide = (result_calls(table, dates, stretch=s) for s in (None, 1.0, 1.5))
+    mids = [m for m, v in plain["matches"].items() if v["scored"]]
+    assert all(plain["matches"][m]["p"] == same["matches"][m]["p"] for m in mids)
+    fav = lambda r: np.mean([max(r["matches"][m]["p"]["xg"]) for m in mids])
+    assert fav(wide) > fav(plain)
+    assert plain["matches"][mids[0]]["threat"] == wide["matches"][mids[0]]["threat"]   # the shown call is untouched
+    c = compare([plain], [wide], n_boot=50)
+    assert c["n"] == len(mids) and abs(c["gain"] - (c["rps_plain"] - c["rps_stretched"])) < 1e-12
+    assert is_lockbox("a") in (True, False) and is_lockbox("11_27") == is_lockbox("11_27")

@@ -70,4 +70,5 @@ jobs:
             strategy_premises.json
             lineup_test.json
             result_calls.json
+            calibration_test.json
           if-no-files-found: ignore
