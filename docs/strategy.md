@@ -107,3 +107,12 @@ Starting line-ups are announced before kick-off, so a pre-match plan may use the
 ### Amendment (written 2026-11-15, after seeing the result above; disclosed second look)
 
 Same weights, but rescaled per call so they sum to the number of earlier matches used: the amount of data is unchanged and only its emphasis moves toward matches with today's starters. Same units, score and decision rule. A pass here is weaker evidence than a first-time pass.
+
+### Amendment result (2026-11-15): line-ups make almost no difference to the calls
+
+With the amount of data held equal, line-up weighting helps 1 of the 9 calls (giveaways per action, +0.017), hurts 2 (possession -0.011, long forward moves -0.010) and leaves 6 unchanged within noise. The rule says keep the plain calls.
+
+- **Reading:** the first result's large losses came from throwing data away, not from line-ups being misleading. Once that is removed, who starts barely moves these calls. How a team plays, at the level these nine calls describe, belongs to the club and its coach, not to the eleven on the day, at least for the ordinary rotation seen here (a typical side keeps 9 of 11 starters).
+- **Correction to the first reading:** the apparent help for lane entries was also an artefact of extra shrinkage. With data held equal, lane entry calls get worse with line-up weighting.
+- **Not tested:** heavy rotation specifically (the 10% of matches with 6 or fewer shared starters), or the absence of one particular player. v3 found player-removal forecasts weak (r = 0.08), which points the same way.
+- **What line-ups are used for:** naming. Players in a plan are restricted to today's starters, and regulars who are not starting are listed for both sides.
