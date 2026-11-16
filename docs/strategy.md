@@ -37,3 +37,35 @@ Each line is an instruction that rests on one **premise**: a pre-match call that
 ## What this does not test
 
 That following the instruction helps. A held premise means the situation the instruction was written for did occur. Whether pressing high against a side that loses the ball deep wins more matches needs an experiment nobody can run on historical data.
+
+## Result (2026-11-15, run exactly as registered): PASS, 11 of 11 premises hold
+
+13 league seasons, 2,741 team-matches. "Occurred" = the real value fell on the called side of the league mean.
+
+| Rule | Fires in | Situation occurred when fired (90% CI) | When not fired |
+|---|---|---|---|
+| without_ball | 24% of games | **94%** (93 to 96) | 36% |
+| with_ball | 24% | **94%** (93 to 96) | 36% |
+| centre_shut | 19% | **90%** (88 to 92) | 50% |
+| protect_centre | 17% | **83%** (80 to 86) | 34% |
+| centre_open | 17% | **83%** (80 to 86) | 34% |
+| patterned | 17% | **81%** (79 to 84) | 41% |
+| hold_block | 15% | **80%** (77 to 83) | 47% |
+| high_regain | 15% | **80%** (76 to 83) | 45% |
+| press_high | 16% | **76%** (72 to 79) | 43% |
+| beat_press | 16% | **76%** (72 to 79) | 43% |
+| long_balls | 16% | **76%** (73 to 80) | 39% |
+
+- Every rule fired more than 400 times and every one clears the bar (at least 60%, interval above 50%).
+- When a plan says a situation will occur, it does in 76 to 94% of games. The weakest are the pressing and long-ball rules: about one time in four the instruction would have been written for a situation that did not arrive.
+- Rules are selective: each fires in 15 to 24% of games, so a typical game gets one or two lines, and some get none.
+
+### Leicester City 2015/16, second half (19 games)
+
+26 instructions, 23 with the situation occurring. 12 of the 26 are "expect to be without the ball" (11 occurred): a team's own strong traits repeat week to week, so its plans look alike. What changes game to game is the opponent-specific lines: for example "press high" before Stoke (targets Butland, Pieters, Whelan; pressers Vardy, Albrighton, Mahrez) and "do not chase high" before two others.
+
+### Limits
+
+- A held premise means the situation occurred, not that the instruction was right or would have worked.
+- Thresholds are in league standard deviations, so a line can rest on a gap that looks small in raw numbers (18% against 16% of giveaways in the own third).
+- The named players are who did the job in earlier matches. Injuries, suspensions and line-up changes are not known to the plan.
