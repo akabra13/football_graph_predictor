@@ -59,7 +59,7 @@ If only corners and free kicks hold, the honest set-piece section of a plan is s
 
 - The three calls for both sides, scored after the match like every other call.
 - Who takes each side's corners and who shoots from set pieces, from earlier matches, starters only.
-- **No instruction is built on these yet.** An instruction needs its own premise test (docs/strategy.md), and nothing here says how to defend a set piece, only how many to expect and from whom.
+- Instructions built on these calls were tested separately; see the next section.
 
 ## Pre-registered: set-piece instructions (written 2026-11-16, before running)
 
@@ -76,3 +76,19 @@ Same idea and same test as the open-play strategy lines (docs/strategy.md): an i
 - **Decision rule:** each rule is judged alone. Only rules that hold go into plans.
 - **Stated expectation:** closer to the line than the open-play rules (which held 76 to 94%), because these calls are weaker. Corners rules around 65 to 70%; set-piece shot rules around 60 to 65%, and one of them may fail.
 - As before, a held premise means the situation occurred, not that the instruction works.
+
+### Result (2026-11-16, run exactly as registered): all four rules hold, nearer the line than open play
+
+2,741 team-matches.
+
+| Rule | Fires | In % of games | Situation occurred (90% CI) | When the rule did not fire |
+|---|---|---|---|---|
+| defend_corners | 336 | 12% | **71%** (67 to 75%) | 41% |
+| win_corners | 333 | 12% | **70%** (66 to 74%) | 41% |
+| defend_set_pieces | 269 | 10% | **65%** (60 to 70%) | 41% |
+| attack_set_pieces | 266 | 10% | **64%** (60 to 69%) | 41% |
+
+- All four clear the bar (at least 60%, interval above 50%) and go into plans. The results sit where I expected.
+- **These are the weakest instructions in a plan.** About one time in three the situation does not arrive, against one in four to one in sixteen for the open-play rules. The two set-piece-shot rules pass with little room: their intervals start at 60%.
+- They are selective: each fires in 10 to 12% of games.
+- A held premise means there were more corners or set-piece shots than the league average, as called. It says nothing about whether the named routine or marking job works.

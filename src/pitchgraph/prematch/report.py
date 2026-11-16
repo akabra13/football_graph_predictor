@@ -105,11 +105,22 @@ def _result_summary(r, team):
             'on held-out seasons.</p>')
 
 
+def _sp_lines(lines):
+    items = []
+    for s in lines:
+        mark = ""
+        if s["premise_held"] is not None:
+            mark = (' <span class="good">✓ the situation occurred</span>' if s["premise_held"]
+                    else ' <span class="bad">✗ it did not</span>')
+        items.append(f"<li>{escape(s['text'])}{mark}</li>")
+    return ("<ul style='margin:4px 0 10px;padding-left:20px;line-height:1.5'>" + "".join(items) + "</ul>") if items else ""
+
+
 def _set_pieces(g, team, opp):
     calls, pl_ = g.get("set_piece_calls"), g.get("set_piece_players")
     if not calls or not pl_:
         return ""
-    return ("<h3>Set pieces</h3>" + _calls_table(calls, team, opp, SP_CALLS).split('<p class="small muted">')[0]
+    return ("<h3>Set pieces</h3>" + _sp_lines(g.get("set_piece_strategy") or []) + _calls_table(calls, team, opp, SP_CALLS).split('<p class="small muted">')[0]
             + f'<p class="small">Their corners are taken by {_names(pl_["their_takers"])}; their shots from set '
             f'pieces come from <b>{_names(pl_["their_shooters"])}</b>. Ours are taken by '
             f'{_names(pl_["our_takers"])} and finished by <b>{_names(pl_["our_shooters"])}</b>.</p>')
@@ -125,8 +136,7 @@ def _set_piece_summary(sp, team):
             bits.append(f'{escape(label).lower()}: {escape(team)} called {fmt.format(we["called"])}, got '
                         f'{fmt.format(we["actual"])}; opponents called {fmt.format(they["called"])}, got '
                         f'{fmt.format(they["actual"])}')
-    return ('<p>Set pieces over these games, ' + "; ".join(bits) + ". No instruction is built on these calls yet: "
-            "they say how much to expect, not how to defend it.</p>") if bits else ""
+    return ('<p>Set pieces over these games, ' + "; ".join(bits) + ".</p>") if bits else ""
 
 
 def _strategy(lines):
