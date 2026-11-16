@@ -74,7 +74,7 @@ GAME_RULES = [
      "have to break down a set defence."),
     ("pressed_deep", "we", "own_third_turnover_share", +1,
      "{opp} force mistakes deep: {p} of your giveaways are called in your own third (your usual {u}). "
-     "Keep the first phase simple or go over them."),
+     "Keep the first phase simple; take no risks in front of your own box."),
     ("sloppier", "we", "turnover_rate", +1,
      "Expect to give the ball away more than usual ({p} of actions, your usual {u}). {opp} disrupt; "
      "protect against the turnover before you play the risky pass."),
@@ -102,8 +102,8 @@ GAME_RULES = [
      "Press high. {opp} lose it deep more than the sides you usually face ({p} of their giveaways in "
      "their own third, your opponents' usual {u}). Targets: {their_giveaways}. Lead with {our_pressers}."),
     ("leave_them", "they", "own_third_turnover_share", -1,
-     "Do not chase high. {opp} are safer at the back than the sides you usually face ({p} of giveaways "
-     "in their own third, usual {u}). Hold your shape and wait."),
+     "Pressing high is less likely to force a mistake today: {opp} are safer at the back than the sides you "
+     "usually face ({p} of giveaways in their own third, usual {u})."),
     ("they_go_long", "they", "long_forward_share", +1,
      "{opp} go long more than the sides you usually face ({p} of moves, usual {u}). Win the first "
      "ball and set for the second; {our_defenders} are the ones under it."),

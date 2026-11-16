@@ -240,7 +240,8 @@ def render_html(rep: dict, team: str, competition: str, season: str) -> str:
         'what the tool would have said. It cannot show what would have happened had the team acted on it. Each '
         'instruction in a plan is football judgement resting on one call that differs from a normal week for the '
         'team (its own usual, or what its opponents usually do against it); the tick shows whether that '
-        'situation occurred, not whether the instruction worked. Player '
+        'situation occurred, not whether the instruction worked. Five instructions could be checked for effect on '
+        'past matches and none showed evidence either way. Player '
         'lists describe who has done the job so far, not who should.</p></div>'
         + _summary(rep["summary"], team) + games +
         '<p class="small muted">Data: StatsBomb Open Data. '
