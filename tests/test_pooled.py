@@ -84,3 +84,46 @@ def test_premises_fire_on_strong_teams_and_mostly_hold():
     rows = np.flatnonzero(p["scored"])[fired]
     assert (p["call"][[np.flatnonzero((p["match"] == p["match"][r]) & (p["team"] == p["opp"][r]))[0]
                        for r in rows], 0] > p["league"][rows, 0]).all()
+
+
+def test_lineups_starters_missing_regulars_and_weights():
+    from pitchgraph.prematch.lineups import missing_regulars, overlap_weight, starters
+
+    rows = []
+    for m in range(1, 8):
+        for p in range(13):
+            start = p < 11 if m < 7 else (p < 10 or p == 12)       # in match 7, player 10 is dropped for 12
+            rows.append({"match_id": m, "team_id": 1, "player_id": p,
+                         "positions": '[{"start_reason": "Starting XI"}]' if start
+                         else ('[{"start_reason": "Substitution - On"}]' if p == 11 else "[]")})
+    xi = starters(pl.DataFrame(rows))
+    assert len(xi[(1, 1)]) == 11 and 11 not in xi[(1, 1)] and 12 in xi[(7, 1)]
+    assert overlap_weight(xi[(1, 1)], xi[(2, 1)]) == 1.0
+    assert abs(overlap_weight(xi[(1, 1)], xi[(7, 1)]) - (10 / 11) ** 4) < 1e-12
+    assert overlap_weight(None, xi[(1, 1)]) == 1.0
+    gone = missing_regulars(xi, 1, 7, set(range(1, 7)), {10: "Ten"})
+    assert [g["name"] for g in gone] == ["Ten"] and gone[0]["started"] == 6
+    assert missing_regulars(xi, 1, 2, {1}, {}) == []               # too few earlier matches to call anyone a regular
+
+
+def test_lineup_weighted_call_follows_the_matching_lineup():
+    from pitchgraph.prematch.pooled import skill_difference
+
+    # one team alternates between two XIs with very different values; weighting should track today's XI
+    rng = np.random.default_rng(0)
+    rows, dates, xi, mid = [], {}, {}, 0
+    a, b = frozenset(range(11)), frozenset(range(100, 111))
+    for rnd in range(40):
+        mid += 1
+        dates[mid] = f"2020-{1 + mid // 28:02d}-{1 + mid % 28:02d}"
+        use_a = rnd % 2 == 0
+        rows.append({"match_id": mid, "team_id": 1, "opp_id": 2, "f": (2.0 if use_a else -2.0) + rng.normal() * .3})
+        rows.append({"match_id": mid, "team_id": 2, "opp_id": 1, "f": rng.normal() * .3})
+        xi[(mid, 1)], xi[(mid, 2)] = (a if use_a else b), frozenset(range(200, 211))
+    p = asof_arrays(pl.DataFrame(rows), dates, ["f"], xi=xi)
+    d = skill_difference([p], 0, n_boot=60)
+    assert d["helped"] and d["skill_lineup"] > d["skill_plain"] + 0.3
+    # with identical line-ups every week, weighting changes nothing
+    same = {k: a for k in xi}
+    p2 = asof_arrays(pl.DataFrame(rows), dates, ["f"], xi=same)
+    assert np.allclose(p2["call"][p2["scored"]], p2["call_xi"][p2["scored"]])

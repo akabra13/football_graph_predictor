@@ -69,3 +69,17 @@ That following the instruction helps. A held premise means the situation the ins
 - A held premise means the situation occurred, not that the instruction was right or would have worked.
 - Thresholds are in league standard deviations, so a line can rest on a gap that looks small in raw numbers (18% against 16% of giveaways in the own third).
 - The named players are who did the job in earlier matches. Injuries, suspensions and line-up changes are not known to the plan.
+
+## Pre-registered: do line-ups sharpen the calls? (written 2026-11-15, before running)
+
+Starting line-ups are announced before kick-off, so a pre-match plan may use them. Two uses, treated separately.
+
+**1. Naming players (no test needed).** Players named in a plan are restricted to those starting today. A regular (started at least 60% of the team's earlier matches, minimum 5) who is not starting is listed as missing, for both sides.
+
+**2. Weighting the calls (tested).** Idea: a team's earlier matches say more about today when more of today's starters played in them.
+
+- **Line-up-weighted call:** as the plain call, but each earlier match of the team counts with weight (shared starters / 11)^4, so 11 shared = 1, 9 = 0.45, 7 = 0.16. The opponent term is weighted the same way by the opponent's shared starters. The 5 pseudo-matches of shrinkage are unchanged, so a heavily rotated side is pulled further toward the league.
+- **Units and score:** the pooled replay's units and skill, for the nine primary calls.
+- **A call is helped** if the 90% interval (resampling whole matches, 500 times) of skill(weighted) minus skill(plain) is above 0, and **hurt** if it is below 0.
+- **Decision rule:** the plans switch to weighted calls only if at least 5 of the 9 are helped and none is hurt. Otherwise the plain calls stay and line-ups are used for naming players only.
+- Stated expectation: small either way. Weighting trades sample size for relevance, and most of what the calls capture is club-level style that survives rotation.

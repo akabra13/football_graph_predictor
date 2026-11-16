@@ -68,4 +68,5 @@ jobs:
             predictability_audit.json
             replay_all_results.json
             strategy_premises.json
+            lineup_test.json
           if-no-files-found: ignore
