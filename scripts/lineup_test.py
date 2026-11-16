@@ -77,4 +77,17 @@ if __name__ == "__main__":
               f"{'  helped' if r['helped'] else '  HURT' if r['hurt'] else ''}")
     print(f"\nprimary calls helped: {len(helped)} of {len(primary)}, hurt: {len(hurt)} -> "
           f"{'SWITCH to line-up calls' if res['switch_to_lineup_calls'] else 'keep the plain calls'}")
+    res["rescaled"] = {f: skill_difference(parts, feats.index(f), key="call_xin") for f in feats}
+    h2 = [f for f in primary if res["rescaled"][f]["helped"]]
+    u2 = [f for f in primary if res["rescaled"][f]["hurt"]]
+    res.update(rescaled_helped=h2, rescaled_hurt=u2, rescaled_switch=bool(len(h2) >= NEED_HELPED and not u2))
+    print("
+Amendment: weights rescaled to keep the amount of data unchanged")
+    for f in sorted(feats, key=lambda f: -res["rescaled"][f]["difference"]):
+        r = res["rescaled"][f]
+        print(f"{'* ' if f in primary else '  '}{f:32s} {r['skill_plain']:+.3f}  {r['skill_lineup']:+.3f}   "
+              f"{r['difference']:+.4f} ({r['ci'][0]:+.4f}..{r['ci'][1]:+.4f})"
+              f"{'  helped' if r['helped'] else '  HURT' if r['hurt'] else ''}")
+    print(f"rescaled: helped {len(h2)} of {len(primary)}, hurt {len(u2)} -> "
+          f"{'SWITCH' if res['rescaled_switch'] else 'keep the plain calls'}")
     Path("lineup_test.json").write_text(json.dumps(res, indent=1), encoding="utf-8")

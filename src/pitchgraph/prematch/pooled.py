@@ -31,10 +31,13 @@ def asof_arrays(table: pl.DataFrame, dates: dict, features: list[str], start_fra
     call, own_, league_, sd_ = (np.full((N, K), np.nan) for _ in range(4))
     n_prior = np.zeros(N, dtype=int)
     call_xi = np.full((N, K), np.nan) if xi is not None else None
+    call_xin = np.full((N, K), np.nan) if xi is not None else None
 
-    def weighted(rows: np.ndarray, w: np.ndarray, league: np.ndarray) -> np.ndarray:
+    def weighted(rows: np.ndarray, w: np.ndarray, league: np.ndarray, rescale: bool = False) -> np.ndarray:
         if not rows.any():
             return league.copy()
+        if rescale and w.sum() > 0:
+            w = w * (len(w) / w.sum())       # same amount of data, different emphasis
         v, w = V[rows], w[:, None]
         ok = np.isfinite(v)
         return (np.where(ok, v * w, 0.0).sum(0) + PSEUDO * league) / ((ok * w).sum(0) + PSEUDO)
@@ -66,6 +69,8 @@ def asof_arrays(table: pl.DataFrame, dates: dict, features: list[str], start_fra
                 w_me = np.array([overlap_weight(me, xi.get((int(m), int(team[r])))) for m in mid[mine]])
                 w_them = np.array([overlap_weight(them, xi.get((int(m), int(opp[r])))) for m in mid[theirs]])
                 call_xi[r] = weighted(mine, w_me, league) + weighted(theirs, w_them, league) - league
+                call_xin[r] = (weighted(mine, w_me, league, True) + weighted(theirs, w_them, league, True)
+                               - league)
 
     later = np.zeros(N, dtype=bool)
     for t in np.unique(team):
@@ -73,7 +78,7 @@ def asof_arrays(table: pl.DataFrame, dates: dict, features: list[str], start_fra
         order = idx[np.lexsort((mid[idx], d[idx]))]
         later[order[int(len(order) * start_fraction):]] = True
     return {"actual": V, "call": call, "own": own_, "league": league_, "league_sd": sd_, "match": mid,
-            "team": team, "opp": opp, "call_xi": call_xi,
+            "team": team, "opp": opp, "call_xi": call_xi, "call_xin": call_xin,
             "scored": later & (n_prior >= MIN_PRIOR)}
 
 
@@ -147,14 +152,15 @@ def premise_rows(p: dict, k: int, who: str, direction: int, threshold: float):
     return fired[ok], held[ok], p["match"][ok]
 
 
-def skill_difference(parts: list[dict], k: int, n_boot: int = 500, seed: int = 0) -> dict:
+def skill_difference(parts: list[dict], k: int, n_boot: int = 500, seed: int = 0,
+                     key: str = "call_xi") -> dict:
     """Skill of the line-up-weighted call minus skill of the plain call for
     feature column k, on the same units, with a 90% interval by resampling matches."""
     a, c, x, lg, keys = [], [], [], [], []
     for i, p in enumerate(parts):
         s_ = (p["scored"] & np.isfinite(p["actual"][:, k]) & np.isfinite(p["call"][:, k])
-              & np.isfinite(p["call_xi"][:, k]))
-        a.append(p["actual"][s_, k]); c.append(p["call"][s_, k]); x.append(p["call_xi"][s_, k])
+              & np.isfinite(p[key][:, k]))
+        a.append(p["actual"][s_, k]); c.append(p["call"][s_, k]); x.append(p[key][s_, k])
         lg.append(p["league"][s_, k]); keys.append(np.array([f"{i}_{m}" for m in p["match"][s_]]))
     a, c, x, lg, keys = (np.concatenate(v) for v in (a, c, x, lg, keys))
     uniq, inv = np.unique(keys, return_inverse=True)

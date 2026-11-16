@@ -83,3 +83,27 @@ Starting line-ups are announced before kick-off, so a pre-match plan may use the
 - **A call is helped** if the 90% interval (resampling whole matches, 500 times) of skill(weighted) minus skill(plain) is above 0, and **hurt** if it is below 0.
 - **Decision rule:** the plans switch to weighted calls only if at least 5 of the 9 are helped and none is hurt. Otherwise the plain calls stay and line-ups are used for naming players only.
 - Stated expectation: small either way. Weighting trades sample size for relevance, and most of what the calls capture is club-level style that survives rotation.
+
+### Result (2026-11-15, run exactly as registered): line-up weighting HURTS; plain calls stay
+
+2,741 team-matches. A team shares on average 8.4 starters with its previous match (median 9, 10th percentile 6).
+
+| Call | Plain | Line-up weighted | Difference (90% CI) |
+|---|---|---|---|
+| Share of the ball | 0.648 | 0.466 | -0.18 (-0.20 to -0.17) |
+| Central entries per possession | 0.427 | 0.303 | -0.12 |
+| Giveaways per action | 0.499 | 0.379 | -0.12 |
+| Reciprocity | 0.350 | 0.270 | -0.08 |
+| Shots per possession | 0.283 | 0.206 | -0.08 |
+| Own-third giveaway share | 0.283 | 0.210 | -0.07 |
+| Entropy rate | 0.322 | 0.249 | -0.07 |
+| Where possessions start | 0.284 | 0.214 | -0.07 |
+| Long forward moves | 0.292 | 0.226 | -0.07 |
+
+- **0 of 9 helped, 9 of 9 hurt.** By the registered rule the plans keep the plain calls, and line-ups are used for naming players only.
+- The only features helped are the lane entries, which the audit found barely knowable: left flank 0.053 to 0.065, and the half-space entries from worse-than-league to about level. Who plays seems to matter for *which side* a team goes down, not for how it plays overall.
+- **A flaw in my design:** the weights also shrink the effective sample (a typical weight is 0.45), so each call is pulled harder toward the league. The result cannot separate "who plays does not matter" from "less data is worse".
+
+### Amendment (written 2026-11-15, after seeing the result above; disclosed second look)
+
+Same weights, but rescaled per call so they sum to the number of earlier matches used: the amount of data is unchanged and only its emphasis moves toward matches with today's starters. Same units, score and decision rule. A pass here is weaker evidence than a first-time pass.
