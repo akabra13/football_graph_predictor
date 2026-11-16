@@ -116,3 +116,17 @@ With the amount of data held equal, line-up weighting helps 1 of the 9 calls (gi
 - **Correction to the first reading:** the apparent help for lane entries was also an artefact of extra shrinkage. With data held equal, lane entry calls get worse with line-up weighting.
 - **Not tested:** heavy rotation specifically (the 10% of matches with 6 or fewer shared starters), or the absence of one particular player. v3 found player-removal forecasts weak (r = 0.08), which points the same way.
 - **What line-ups are used for:** naming. Players in a plan are restricted to today's starters, and regulars who are not starting are listed for both sides.
+
+## Second team: Barcelona 2015/16, second half (19 games; run 2026-11-16)
+
+Run to see whether the plan reads as well for a possession side as for Leicester. Nothing here was pre-registered; it is a reading of one replay.
+
+- **The calls work better than for Leicester:** 248 of 342 closer than the league average (Leicester 206 of 342). The most likely result was the real one in 15 of 19 games.
+- **The instructions held:** 82 given, 69 with the situation occurring.
+- **But the plan barely changes from week to week.** "You will have the ball" fired in 19 of 19 games, "the centre is open for you" in 19 and "they are patterned" in 15. Those three lines are 53 of the 82 instructions. They are true, and a Barcelona coach already knows them.
+- **Cause:** every rule compares a call with the league average. A team far from the league average in its own style trips the same rules against everyone. Leicester showed the same thing less strongly (11 of 26 lines were "expect to be without the ball").
+- **What did change by opponent:** press high (9 games, situation occurred in 5), expect long balls (4), set pieces as a route to goal (12, occurred in 9).
+- **Favourites understated again:** 38 expected points, 46 taken; away at Deportivo the win was given 49% (it finished 8-0).
+- **Corners over-called:** 113 called for Barcelona, 95 taken.
+
+**What this points to:** instructions should rest on how this game differs from the team's own usual, not from the league. That is a new set of premises and needs its own registered test.
