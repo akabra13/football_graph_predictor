@@ -160,3 +160,35 @@ In an unequal league the ratio is small, so teams keep more of their own record.
 **Disclosure.** All 13 seasons have been looked at before, the lockbox once. There is no parameter to tune, which is the protection here, but this is not a blind test. No untouched full league seasons remain in the free data.
 
 **Stated expectation:** a small gain in RPS (0.001 to 0.003), bar 1 uncertain, calibration better at the top end but not inside 5 points everywhere.
+
+### Result (2026-11-16, run exactly as registered): no gain; the current model stays
+
+1,357 matches.
+
+| Bar | Result | Verdict |
+|---|---|---|
+| 1. Sharper | RPS 0.1896 to 0.1896; difference 0.0000 (-0.0006 to +0.0006) | fail |
+| 2. Consistent | tuning seasons -0.0001, lockbox seasons +0.0001 | fail |
+| 3. Threat call not hurt | skill 0.296 to 0.301; change +0.005 (+0.001 to +0.009) | pass |
+| 4. Calibrated | worst gap 7.5 points to 5.1 | fail, narrowly |
+
+**The diagnosis was right and it did not matter.** Leagues do differ a great deal in how unequal they are. The pseudo-matches the data asked for:
+
+| League | Pseudo-matches for xG |
+|---|---|
+| Liga F 2023/24, WSL 2018/19 and 2020/21 | 1.4 to 1.5 |
+| WSL 2019/20 and 2023/24, Serie A Women, Frauen Bundesliga | 2.1 to 2.7 |
+| La Liga 2015/16 | 5.4 |
+| NWSL 2023, Premier League 2015/16 | 6.5 to 7.4 |
+| Ligue 1, Serie A 2015/16 | 8.3 to 9.8 |
+| Indian Super League 2021/22 | 15.4 |
+
+The fixed 5 is close to right for the big men's leagues and too many for most women's leagues. Using each league's own number moved individual seasons by up to 0.004 either way and the total by nothing.
+
+**Reading.**
+
+- By the registered rule the current model stays, with its caution note.
+- Two attempts to improve the chances (a stretch, then league-aware shrinkage) have both left the result score where it was. The simple model is at about the limit of what a team's earlier xG says about a result; what is left is mostly the luck of the match.
+- The remaining calibration gaps are 3 to 6 points and were within one registered point of passing. They are small enough that I am not chasing them further on these seasons.
+- Side finding, not acted on: league-aware shrinkage makes the threat call itself slightly better (+0.005, interval above 0). It is too small to justify a different rule for one call.
+- **Stopping work on the result model.** A real improvement would need new information (who is playing, rest days, a longer history across seasons), not a better way of using the same information.
