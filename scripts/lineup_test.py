@@ -81,8 +81,8 @@ if __name__ == "__main__":
     h2 = [f for f in primary if res["rescaled"][f]["helped"]]
     u2 = [f for f in primary if res["rescaled"][f]["hurt"]]
     res.update(rescaled_helped=h2, rescaled_hurt=u2, rescaled_switch=bool(len(h2) >= NEED_HELPED and not u2))
-    print("
-Amendment: weights rescaled to keep the amount of data unchanged")
+    print()
+    print("Amendment: weights rescaled to keep the amount of data unchanged")
     for f in sorted(feats, key=lambda f: -res["rescaled"][f]["difference"]):
         r = res["rescaled"][f]
         print(f"{'* ' if f in primary else '  '}{f:32s} {r['skill_plain']:+.3f}  {r['skill_lineup']:+.3f}   "
