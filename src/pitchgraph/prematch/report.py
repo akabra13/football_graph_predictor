@@ -100,9 +100,9 @@ def _result_summary(r, team):
             f'<p>Threat calls: {escape(team)} were called to create {we["called"]:.1f} xG and created '
             f'{we["actual"]:.1f}; opponents were called to create {they["called"]:.1f} and created '
             f'{they["actual"]:.1f} (penalties excluded).</p>'
-            '<p class="small muted">Tested on 1,357 matches: the chances beat the usual rates by 18%, but are too '
-            'cautious at the ends. Results given over 60% happened 80% of the time, and results given under 20% '
-            'happened 9% of the time.</p>')
+            '<p class="small muted">Tested on 1,357 matches: the chances beat the usual rates by 18%, but read '
+            'them as rough. In testing they were off by 4 to 8 points in places, and a correction did not hold up '
+            'on held-out seasons.</p>')
 
 
 def _strategy(lines):

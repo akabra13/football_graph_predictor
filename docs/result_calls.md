@@ -106,3 +106,28 @@ Worst gap 7.5 points, above the 5-point line. **The chances are too cautious at 
 **Disclosure.** The problem itself was seen on all 13 seasons, lockbox included, so the direction of the fix is not blind. Its size is.
 
 **Stated expectation:** s between 1.2 and 1.5; bar 1 passes narrowly; bar 2 uncertain, because the lockbox bins are small.
+
+### Result (2026-11-16, run exactly as registered): the fix FAILS on the lockbox; nothing changes
+
+Tuning: 7 seasons (WSL 2019/20 and 2023/24, Indian Super League 2021/22, La Liga, Premier League and Serie A 2015/16, Serie A Women 2023/24). Lockbox: 6 seasons, 558 matches (WSL 2018/19 and 2020/21, Frauen Bundesliga, Liga F and NWSL 2023, Ligue 1 2015/16).
+
+- **Tuning chose s = 1.4**, inside the range I expected. But the gain there was small: RPS 0.1895 to 0.1870.
+- **Lockbox, bar 1 (sharper): fail.** RPS 0.1896 without the stretch, 0.1913 with it; difference -0.0017 (-0.0045 to +0.0011). The stretch made the chances slightly worse, not better.
+- **Lockbox, bar 2 (calibrated): fail.** Worst gap 8.1 points without the stretch, 14.7 with it.
+
+| Chance given | Without: given | Without: happened | With s = 1.4: given | With: happened |
+|---|---|---|---|---|
+| under 20% | 12.5% | 8.6% | 10.2% | 12.7% |
+| 20 to 30% | 25.1% | 27.8% | 24.9% | 28.9% |
+| 30 to 40% | 34.6% | 32.2% | 34.6% | 30.9% |
+| 40 to 50% | 44.8% | 44.0% | 45.2% | 47.3% |
+| 50 to 60% | 54.5% | 47.1% | 54.8% | 40.2% |
+| over 60% | 74.6% | 82.6% | 79.3% | 75.0% |
+
+**Reading.**
+
+- By the registered rule the plans keep s = 1 and keep their note.
+- The miscalibration is real in size (gaps of 4 to 8 points) but **not a simple, stable "too cautious" pattern**. In the lockbox, strong favourites are understated (75% given, 83% happened) while moderate favourites are overstated (55% given, 47% happened). One stretch cannot fix both, and it overshoots at the top.
+- My explanation for the first result (shrinkage understates every gap) was too simple. More likely the leagues differ: a number that fits unequal leagues is wrong for even ones.
+- **What the chances are good for:** ranking outcomes and beating base rates by 18%. **What they are not good for:** being read as exact to within 5 to 8 points.
+- Stopping here. No second attempt on this lockbox; a better model (per-league spread, or a rating that updates) would need new held-out data.
