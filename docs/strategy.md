@@ -209,3 +209,19 @@ By the arithmetic of the calls, the first departure is what this opponent does t
 - **Fire rates were higher than I expected** (8 to 25%, not 5 to 15%), so a typical game has more than four candidate lines and the cap of four decides what is shown.
 - By the decision rule the plans now show these lines, at most four, strongest first. The league-based rules above, and the four league-based set-piece rules in docs/set_pieces.md, are no longer shown in plans.
 - Unchanged limit: a held premise means the situation occurred, not that the instruction works.
+
+### The two replays with the rebuilt plans (2026-11-16)
+
+| | Leicester 2015/16 | Barcelona 2015/16 |
+|---|---|---|
+| Instructions, and how many had the situation occur | 39, 32 occurred | 35, 26 occurred |
+| Before the rebuild | 31, 27 occurred | 82, 69 occurred |
+| Most-used rule | less_ball, 6 of 19 games | more_ball, 4 of 19 games |
+| Games with no instruction | 4 | 6 |
+| Different sets of lines across 19 games | 15 | 14 |
+
+- **The repetition is gone.** Barcelona's three weekly lines (53 of 82) no longer appear; no rule fires in more than 4 of their 19 games.
+- **Plans now read like the opponent.** Leicester v Manchester City: protect the centre (Sterling and Toure to Aguero; Huth, Morgan and Kante hold the zone), expect 33% of the ball against a usual 41%, do not chase high, clear their counter-press. All four situations occurred. Against West Brom, Watford and Crystal Palace the plan instead says they go long and Leicester will have more of the ball than usual.
+- **Some games get no instruction** (Barcelona 6, Leicester 4). That is the plan saying this opponent is ordinary, and it is honest, but it means the plan has nothing to add that week.
+- **Barcelona's lines occurred less often (26 of 35) than the pooled test suggests.** 35 lines is too few to read much into; the two "less of the ball" calls against Celta and Real Madrid both missed.
+- **The cost:** the old lines about the team's own style were more reliable (84%) because a team's own style is the most knowable thing there is. The new ones are less certain and more useful.
