@@ -69,4 +69,5 @@ jobs:
             replay_all_results.json
             strategy_premises.json
             lineup_test.json
+            result_calls.json
           if-no-files-found: ignore
