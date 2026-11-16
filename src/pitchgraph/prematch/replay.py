@@ -33,7 +33,7 @@ from pitchgraph.chains.denial_test import region_links
 from pitchgraph.chains.team import Chain, league_chain, shrunk_chain
 from pitchgraph.chains.validate import _crossing_lanes, _observed_lanes
 from pitchgraph.graphs.routes import LANE_EDGES
-from pitchgraph.prematch import strategy
+from pitchgraph.prematch import lineups, strategy
 from pitchgraph.prematch.audit import PSEUDO, season_table
 
 KAPPA = 1000.0
@@ -168,17 +168,24 @@ def _mid(chain: Chain, mask: np.ndarray) -> float:
                         + (base - denial.deny(chain, mask, False).threat)) / base)
 
 
-def _top(df: pl.DataFrame, col: str, names: dict, k: int = 3) -> list[dict]:
+def _top(df: pl.DataFrame, col: str, names: dict, k: int = 3, starting: frozenset | None = None) -> list[dict]:
+    """The k players who did this most. With `starting` (today's XI), only
+    starters are named; shares stay relative to everyone, so they show how
+    much of the job the named players have actually carried."""
     if df.height == 0:
         return []
-    g = df.group_by(col).agg(n=pl.len(), fallback=pl.first("player")).sort("n", descending=True)
+    g = (df.filter(pl.col(col).is_not_null()).group_by(col)
+           .agg(n=pl.len(), fallback=pl.first("player")).sort(["n", col], descending=[True, False]))
     total = float(g["n"].sum())
-    return [{"player_id": int(r[col]), "name": names.get(r[col]) or r["fallback"] or str(r[col]),
-             "share": r["n"] / total} for r in g.head(k).iter_rows(named=True) if r[col] is not None]
+    rows = [{"player_id": int(r[col]), "name": names.get(r[col]) or r["fallback"] or str(r[col]),
+             "share": r["n"] / total} for r in g.iter_rows(named=True)]
+    if starting:
+        rows = [r for r in rows if r["player_id"] in starting]
+    return rows[:k]
 
 
 def player_links(ev: pl.DataFrame, prior: set, us: int, them: int, side: str, lane_we: int,
-                 names: dict) -> dict:
+                 names: dict, xi_us: frozenset | None = None, xi_them: frozenset | None = None) -> dict:
     """Who is involved, from earlier matches only.
 
     their_passers / their_receivers  the opponent's players on their lever
@@ -208,15 +215,16 @@ def player_links(ev: pl.DataFrame, prior: set, us: int, them: int, side: str, la
                                & pl.col("x").is_not_null() & (pl.col("x") < 40))
     our_press = prev.filter((pl.col("team_id") == us) & (pl.col("type") == "Pressure")
                             & pl.col("x").is_not_null() & (pl.col("x") >= 80))
-    return {"their_giveaways": _top(their_losses, "player_id", names),
-            "our_pressers": _top(our_press, "player_id", names),
-            "their_passers": _top(theirs, "player_id", names, 2),
-            "their_receivers": _top(recv, "recipient_id", names, 2),
-            "our_defenders": _top(ours_def, "player_id", names),
-            "our_carriers": _top(ours_att, "player_id", names)}
+    return {"their_giveaways": _top(their_losses, "player_id", names, 3, xi_them),
+            "our_pressers": _top(our_press, "player_id", names, 3, xi_us),
+            "their_passers": _top(theirs, "player_id", names, 2, xi_them),
+            "their_receivers": _top(recv, "recipient_id", names, 2, xi_them),
+            "our_defenders": _top(ours_def, "player_id", names, 3, xi_us),
+            "our_carriers": _top(ours_att, "player_id", names, 3, xi_us)}
 
 
-def plan(asof: AsOf, ev: pl.DataFrame, us: int, them: int, prior: set, names: dict) -> dict | None:
+def plan(asof: AsOf, ev: pl.DataFrame, us: int, them: int, prior: set, names: dict,
+         xi: dict | None = None, mid: int | None = None) -> dict | None:
     """The pre-match plan for `us` against `them`, from `prior` matches only."""
     league = asof.league(prior)
     chains = {k: asof.team(t, s, prior, league) for k, (t, s) in
@@ -245,7 +253,12 @@ def plan(asof: AsOf, ev: pl.DataFrame, us: int, them: int, prior: set, names: di
     return {"they_attack": {k: v.tolist() for k, v in they.items()},
             "we_attack": {k: v.tolist() for k, v in we.items()},
             "lever": lever, "lever_side": side, "lane_we": lane_we,
-            "players": player_links(ev, prior, us, them, side, None, names),
+            "players": player_links(ev, prior, us, them, side, None, names,
+                                    (xi or {}).get((mid, us)), (xi or {}).get((mid, them))),
+            "lineup": None if not xi else {
+                "known": bool((mid, us) in xi and (mid, them) in xi),
+                "us_missing": lineups.missing_regulars(xi, us, mid, prior, names),
+                "them_missing": lineups.missing_regulars(xi, them, mid, prior, names)},
             "prior_matches": {"us": int(asof.keep(us, "attack", prior).sum()),
                               "them": int(asof.keep(them, "attack", prior).sum())}}
 
@@ -293,7 +306,8 @@ def outcome(asof: AsOf, us: int, them: int, mid: int, prior: set, the_plan: dict
 
 
 def replay(ev: pl.DataFrame, matches: pl.DataFrame, team_id: int, names: dict | None = None,
-           start_fraction: float = 0.5, kappa: float = KAPPA, min_matches: int = 10) -> dict:
+           start_fraction: float = 0.5, kappa: float = KAPPA, min_matches: int = 10,
+           lineup_table: pl.DataFrame | None = None) -> dict:
     """Walk `team_id` through the later part of its season.
 
     `ev` is one competition-season of `Lake.events()`; `matches` its rows of
@@ -301,6 +315,10 @@ def replay(ev: pl.DataFrame, matches: pl.DataFrame, team_id: int, names: dict | 
     through the team's fixtures by date.
     """
     names = names or {}
+    xi = lineups.starters(lineup_table) if lineup_table is not None else None
+    if lineup_table is not None and "player" in lineup_table.columns:
+        full = dict(zip(lineup_table["player_id"].to_list(), lineup_table["player"].to_list()))
+        names = {**full, **{k: v for k, v in names.items() if v}}      # nickname where there is one
     store = CountStore.from_events(ev.lazy())
     asof = AsOf(store, kappa)
     ftable = season_table(store, min_matches=min_matches)
@@ -314,7 +332,7 @@ def replay(ev: pl.DataFrame, matches: pl.DataFrame, team_id: int, names: dict | 
         home = r["home_team_id"] == team_id
         them = r["away_team_id"] if home else r["home_team_id"]
         prior = {m for m, d in dates.items() if d < dates[mid]}
-        p = plan(asof, ev, team_id, them, prior, names)
+        p = plan(asof, ev, team_id, them, prior, names, xi, int(mid))
         game = {"match_id": int(mid), "date": dates[mid], "home": bool(home),
                 "opponent": r["away_team"] if home else r["home_team"], "opponent_id": int(them),
                 "score": [r["home_score"], r["away_score"]] if home else [r["away_score"], r["home_score"]],

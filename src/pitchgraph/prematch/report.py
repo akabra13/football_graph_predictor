@@ -56,6 +56,24 @@ def _calls_table(calls, team, opp):
             "Red: it was not.</p>")
 
 
+def _lineup(lu, team, opp):
+    if not lu or not lu.get("known"):
+        return ""
+
+    def gone(rows):
+        return ", ".join(f"{escape(str(r['name']))} (started {r['started']} of {r['of']})" for r in rows)
+
+    us, them = lu["us_missing"], lu["them_missing"]
+    if not us and not them:
+        return '<p class="small"><b>Line-ups:</b> both sides start their regulars.</p>'
+    parts = []
+    if us:
+        parts.append(f"{escape(team)} without {gone(us)}")
+    if them:
+        parts.append(f"{escape(opp)} without {gone(them)}")
+    return ('<p class="small"><b>Line-ups:</b> ' + "; ".join(parts) + ". Players named below all start today.</p>")
+
+
 def _strategy(lines):
     if not lines:
         return ('<h3>The plan</h3><p class="muted">Nothing about this match departs enough from the league to '
@@ -80,7 +98,7 @@ def _game(g, team):
         return head + '<p class="muted">Too few earlier matches for a plan.</p></div>'
     pl_ = p["players"]
     side = p["lever_side"]
-    body = _strategy(g.get("strategy") or [])
+    body = _lineup(p.get("lineup"), team, g["opponent"]) + _strategy(g.get("strategy") or [])
     body += _calls_table(g["calls"], team, g["opponent"]) if g.get("calls") else ""
     body += (
         '<div class="cols"><div>'

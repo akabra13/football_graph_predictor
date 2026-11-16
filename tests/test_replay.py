@@ -128,3 +128,30 @@ def test_strategy_lines_rest_on_calls_and_are_checked():
     assert all(len(g["strategy"]) <= MAX_LINES for g in rep["games"])
     s = rep["summary"]
     assert s["strategy_premises_held"] <= s["strategy_lines"]
+
+
+def test_lineups_restrict_named_players_to_starters_and_flag_missing_regulars():
+    ev, matches = _league()
+    rows = []
+    for m in matches.iter_rows(named=True):
+        for t in (m["home_team_id"], m["away_team_id"]):
+            for k in range(12):
+                pid = t * 10 + k if k < 6 else t * 100 + k
+                # team 1's player 12 (a regular carrier) is left out of its last three matches
+                dropped = t == 1 and pid == 12 and m["match_id"] >= 19
+                rows.append({"match_id": m["match_id"], "team_id": t, "player_id": pid, "player": f"Full{pid}",
+                             "positions": "[]" if (k == 11 or dropped) else '[{"start_reason": "Starting XI"}]'})
+    rep = replay(ev, matches, team_id=1, start_fraction=0.5, kappa=10.0, lineup_table=pl.DataFrame(rows))
+    last = rep["games"][-1]
+    lu = last["plan"]["lineup"]
+    assert lu["known"] and [r["player_id"] for r in lu["us_missing"]] == [12] and lu["them_missing"] == []
+    named = [p["player_id"] for k in ("our_carriers", "our_pressers", "our_defenders")
+             for p in last["plan"]["players"][k]]
+    assert named and 12 not in named                       # he is not starting, so he is not named
+    first = rep["games"][0]["plan"]
+    assert first["lineup"]["us_missing"] == [] and 12 in [p["player_id"] for p in first["players"]["our_carriers"]]
+    assert first["players"]["our_carriers"][0]["name"].startswith("Full")     # full name when there is no nickname
+
+    from pitchgraph.prematch.report import render_html
+    html = render_html(rep, "T1", "Test League", "2020")
+    assert "T1 without Full12" in html and "both sides start their regulars" in html

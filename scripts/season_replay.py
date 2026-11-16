@@ -43,7 +43,10 @@ if __name__ == "__main__":
     cid, sid = (int(x) for x in hit["key"].split("_"))
     matches = lake.matches().filter((pl.col("competition_id") == cid) & (pl.col("season_id") == sid))
     ev = lake.events().select(COLS).collect()
-    rep = replay(ev, matches, hit["team_id"], player_names(lake), start_fraction=args.start)
+    lineup_table = (lake.scan("lineups").filter(pl.col("match_id").is_in(matches["match_id"].to_list())).collect()
+                    if lake.has("lineups") else None)
+    rep = replay(ev, matches, hit["team_id"], player_names(lake), start_fraction=args.start,
+                 lineup_table=lineup_table)
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
