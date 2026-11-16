@@ -85,3 +85,26 @@ The audit above used leave-one-match-out, which borrows from matches played late
 - **Score per feature:** skill = 1 − SSE(call) / SSE(league baseline), pooled over all units, with a 90% interval from resampling whole matches (500 times).
 - **Primary:** the nine calls the replay makes. A call **holds** if its interval is above 0. **Pass bar: at least 7 of the 9 hold.**
 - **Secondary (descriptive):** the same for all 24 audited features; what the opponent term adds (skill of the full call minus skill of the team-only call); and, per team with at least 8 scored games, the share of its calls that were closer than the league baseline (reported as a distribution, so one good team cannot carry the result).
+
+### Result (2026-11-15, run exactly as registered): PASS, 9 of 9 calls hold
+
+13 league seasons, 181 teams, 2,741 scored team-matches. Every call uses only matches played on earlier dates.
+
+| Call | Skill vs league baseline (90% CI) | Team only | Opponent adds | Calls closer than league |
+|---|---|---|---|---|
+| Share of the ball | **0.648** (0.626 to 0.671) | 0.326 | +0.322 | 72% |
+| Giveaways per action | **0.499** (0.479 to 0.519) | 0.412 | +0.087 | 69% |
+| Entries into the central final third per possession | **0.427** (0.402 to 0.455) | 0.294 | +0.133 | 64% |
+| Reciprocity (graph) | **0.350** (0.329 to 0.372) | 0.281 | +0.069 | 64% |
+| Entropy rate (graph) | **0.322** (0.298 to 0.345) | 0.230 | +0.092 | 62% |
+| Long forward moves | **0.292** (0.268 to 0.314) | 0.229 | +0.063 | 60% |
+| Where possessions start | **0.284** (0.250 to 0.312) | 0.149 | +0.135 | 59% |
+| Shots per possession | **0.283** (0.254 to 0.313) | 0.164 | +0.119 | 58% |
+| Share of giveaways in own third | **0.283** (0.250 to 0.316) | 0.101 | +0.183 | 57% |
+
+- **All nine intervals are above 0; the bar (7 of 9) is passed.** This is the first pre-registered pass in the programme made with predictions that use only earlier matches, which is how a pre-match report would be made.
+- **Not carried by a few teams:** per team (181 with 8+ scored games), the median share of calls closer than the league baseline is 62% (quartiles 58 to 68%, range 42 to 89%); 97% of teams are above half.
+- **The opponent term adds to every one of the nine** (all intervals above 0), most for possession (+0.32) and own-third giveaways (+0.18).
+- **Secondary, all 24 features:** 22 hold. The two that do not are entries through the left and right half-space, where the call is *worse* than the league average (-0.04). Lane entries on the flanks and centre hold but are weak (0.05 to 0.08), and the opponent adds nothing to them.
+- **What skill means in practice:** a skill of 0.65 for possession removes 65% of the squared error of saying "50%". At the other end, 57% of own-third-giveaway calls beat the league average: better than a coin, far from certain, in any single match.
+- **Limits:** these are descriptions of how a match will look, not of who wins; nothing here tests whether acting on a call changes the result. Open play only (set pieces are excluded from the counts). The league seasons are 2015/16 men's and 2018 to 2024 women's; other eras are untested.

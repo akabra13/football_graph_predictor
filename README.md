@@ -18,6 +18,8 @@ Built on open data only. Every claim is pre-registered or tested, and failures a
 - **Style is a fingerprint.** Half a team's matches identify its other half among the whole league: 90% (Premier League 15/16), 95% (Serie A 15/16), 75% (Liga F 23/24); chance is 5-9%.
 - **Matchups change *where* a team attacks, not *how much*.** Lane predictions improve with the matchup model in four of five leagues; threat volume does not.
 - **Player removal is a weak forecast** (r = 0.08 over 781 real absences), so the Library shows "who the threat runs through", not predictions.
+- **Pre-match calls hold.** Nine things about a team's next match (share of the ball, giveaways, entries into the central final third, how high it wins the ball, and more), called only from earlier matches, beat the league average for all nine across 2,741 team-matches and 181 teams. Possession calls remove 65% of the error. Lane-by-lane entry calls do not hold and were dropped. See [docs/predictability_audit.md](docs/predictability_audit.md).
+- **The main lever is real, the rest of the plan is not proven.** Passes from a half-space into the centre of the final third are worth 12-14% of a team's threat in real matches, as the planner says; its ranking of smaller links and its team-specific numbers did not pass. See [docs/denial_test.md](docs/denial_test.md).
 - **Data:** 80 competition-seasons, 3,960 matches, 13.9M events, refreshed weekly by GitHub Actions.
 
 Full method, tables and history: [docs/lab_notebook.md](docs/lab_notebook.md).
@@ -37,6 +39,7 @@ pip install -e ".[dev]"
 pitchgraph teams --search "arsenal"
 pitchgraph report "Leicester City" 2015/16 --stream --out leicester.html
 pitchgraph matchup "Arsenal" "Leicester City" 2015/16 --stream
+python scripts/season_replay.py "Leicester City" 2015/16 --competition "Premier League" --out out/replay
 python -m pytest tests -q
 ```
 
