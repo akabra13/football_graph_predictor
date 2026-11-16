@@ -33,7 +33,7 @@ from pitchgraph.chains.denial_test import region_links
 from pitchgraph.chains.team import Chain, league_chain, shrunk_chain
 from pitchgraph.chains.validate import _crossing_lanes, _observed_lanes
 from pitchgraph.graphs.routes import LANE_EDGES
-from pitchgraph.prematch import lineups, result, strategy
+from pitchgraph.prematch import lineups, result, setpieces, strategy
 from pitchgraph.prematch.audit import PSEUDO, season_table
 
 KAPPA = 1000.0
@@ -79,13 +79,13 @@ def asof_call(table: pl.DataFrame, feature: str, team: int, opp: int, prior: set
     return {"predicted": own + against - league, "own": own, "league": league, "league_sd": league_sd}
 
 
-def calls_for(table: pl.DataFrame, us: int, them: int, mid: int, prior: set) -> dict:
+def calls_for(table: pl.DataFrame, us: int, them: int, mid: int, prior: set, features=None) -> dict:
     """Every call for both sides, with the real value from the match."""
     out = {}
     for who, a, b in (("we", us, them), ("they", them, us)):
         row = table.filter((pl.col("match_id") == mid) & (pl.col("team_id") == a))
         out[who] = {}
-        for feature, _, _ in CALLS:
+        for feature in (features or [f for f, _, _ in CALLS]):
             c = asof_call(table, feature, a, b, prior)
             if c is None:
                 continue
@@ -223,6 +223,43 @@ def player_links(ev: pl.DataFrame, prior: set, us: int, them: int, side: str, la
             "our_carriers": _top(ours_att, "player_id", names, 3, xi_us)}
 
 
+SP_CALLS = [("corners", "Corners", "{:.1f}"), ("sp_shots", "Shots from set pieces", "{:.1f}"),
+            ("sp_xg", "xG from set pieces", "{:.2f}")]      # the set-piece calls that hold (docs/set_pieces.md)
+
+
+def setpiece_players(ev: pl.DataFrame, prior: set, us: int, them: int, names: dict,
+                     xi_us: frozenset | None = None, xi_them: frozenset | None = None) -> dict:
+    """Who takes corners and who shoots from set pieces, from earlier matches only."""
+    prev = ev.filter(pl.col("match_id").is_in(list(prior)))
+    corner = prev.filter((pl.col("type") == "Pass") & (pl.col("sub_type") == "Corner"))
+    shot = prev.filter((pl.col("type") == "Shot") & pl.col("play_pattern").is_in(setpieces.SET_PIECE)
+                       & (pl.col("sub_type").fill_null("") != "Penalty"))
+    out = {}
+    for who, tid, xi in (("our", us, xi_us), ("their", them, xi_them)):
+        out[f"{who}_takers"] = _top(corner.filter(pl.col("team_id") == tid), "player_id", names, 2, xi)
+        out[f"{who}_shooters"] = _top(shot.filter(pl.col("team_id") == tid), "player_id", names, 3, xi)
+    return out
+
+
+def summarise_calls(done: list[dict], key: str, features: list[str]) -> dict:
+    """Per side and feature: how often the call beat the league, and its skill."""
+    out = {}
+    for who in ("we", "they"):
+        out[who] = {}
+        for feature in features:
+            rows = [g[key][who][feature] for g in done if g.get(key) and feature in g[key][who]
+                    and g[key][who][feature]["actual"] is not None]
+            if not rows:
+                continue
+            a = np.array([r["actual"] for r in rows])
+            sse = float(((np.array([r["predicted"] for r in rows]) - a) ** 2).sum())
+            sse0 = float(((np.array([r["league"] for r in rows]) - a) ** 2).sum())
+            out[who][feature] = {"n": len(rows), "closer_than_league": int(sum(r["closer_than_league"] for r in rows)),
+                                 "skill": 1 - sse / sse0 if sse0 > 0 else None,
+                                 "called": float(sum(r["predicted"] for r in rows)), "actual": float(a.sum())}
+    return out
+
+
 def plan(asof: AsOf, ev: pl.DataFrame, us: int, them: int, prior: set, names: dict,
          xi: dict | None = None, mid: int | None = None) -> dict | None:
     """The pre-match plan for `us` against `them`, from `prior` matches only."""
@@ -327,6 +364,7 @@ def replay(ev: pl.DataFrame, matches: pl.DataFrame, team_id: int, names: dict | 
     mine = sorted((m for m, r in info.items() if team_id in (r["home_team_id"], r["away_team_id"])),
                   key=lambda m: (dates[m], m))
     rcalls = result.result_calls(result.result_table(ev, matches), dates, start_fraction)["matches"]
+    sptable = setpieces.setpiece_table(ev)
     games = []
     for mid in mine[int(len(mine) * start_fraction):]:
         r = info[mid]
@@ -343,6 +381,9 @@ def replay(ev: pl.DataFrame, matches: pl.DataFrame, team_id: int, names: dict | 
             game["calls"] = calls_for(ftable, team_id, them, mid, prior)
             game["strategy"] = strategy.lines(game["calls"], p["players"], game["opponent"],
                                               {f: fmt for f, _, fmt in CALLS})
+            game["set_piece_calls"] = calls_for(sptable, team_id, them, mid, prior, [f for f, _, _ in SP_CALLS])
+            game["set_piece_players"] = setpiece_players(ev, prior, team_id, them, names, (xi or {}).get((int(mid), team_id)),
+                                                         (xi or {}).get((int(mid), them)))
             game["result_call"] = result.for_team(rcalls.get(int(mid)), bool(home))
         games.append(game)
     return {"team_id": int(team_id), "games": games, "summary": summarise(games)}
@@ -370,6 +411,7 @@ def summarise(games: list[dict]) -> dict:
             out["calls"][who][feature] = {"n": len(rows), "closer_than_league": hits,
                                           "skill": 1 - sse / sse0 if sse0 > 0 else None}
     out["calls_closer"], out["calls_total"] = closer, total
+    out["set_pieces"] = summarise_calls(done, "set_piece_calls", [f for f, _, _ in SP_CALLS])
     out["result_calls"] = result.summarise_team([g["result_call"] for g in done if g.get("result_call")])
     fired = [s for g in done for s in g.get("strategy", []) if s["premise_held"] is not None]
     out["strategy_lines"] = len(fired)

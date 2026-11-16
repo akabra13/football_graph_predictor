@@ -35,3 +35,28 @@ Identical to the pooled replay (docs/predictability_audit.md): the same competit
 - Shots per corner and set-piece share of threat do not hold: ratios of small counts.
 
 If only corners and free kicks hold, the honest set-piece section of a plan is short: how many to expect each way and who takes and attacks them, with no claim about how dangerous they will be.
+
+## Result (2026-11-16, run exactly as registered): three calls go into the plans
+
+13 competition-seasons, 2,741 team-matches.
+
+| Call | Per match | Skill (90% CI) | Team only | Opponent adds | Verdict |
+|---|---|---|---|---|---|
+| Corners | 4.95 | **0.167** (0.141 to 0.194) | 0.097 | +0.069 | into plans |
+| Shots from set pieces | 4.49 | **0.106** (0.080 to 0.128) | 0.047 | +0.059 | into plans |
+| xG from set pieces | 0.40 | **0.072** (0.051 to 0.092) | 0.048 | +0.024 | into plans |
+| Free kicks in the final third | 2.38 | 0.039 (0.016 to 0.060) | 0.008 | +0.031 | holds, too weak |
+| Shots per corner | 0.42 | -0.031 (-0.049 to -0.013) | | | does not hold |
+| Set-piece share of threat | 0.34 | -0.035 (-0.052 to -0.016) | | | does not hold |
+
+- **How many set pieces a side gets is knowable; how good it is at them is not.** Corners and set-piece shots follow territory. Shots per corner, the nearest thing here to set-piece quality, is worse than guessing the league average: with about five corners a match, a team's record is noise.
+- **The opponent matters as much as the team.** For set-piece shots the opponent adds more skill (+0.059) than the team's own record gives (0.047): who you play decides how many set pieces you defend.
+- **Against my expectation:** set-piece shots and xG cleared the 0.05 line; I expected them under it.
+- These skills are low next to the open-play calls (possession 0.65, giveaways 0.50). They belong in a plan as a rough expectation.
+- A third of all non-penalty xG comes in possessions that began with a corner or free kick. That definition is wide: it counts a shot late in a long possession that started with a free kick in a team's own half.
+
+### What plans now show
+
+- The three calls for both sides, scored after the match like every other call.
+- Who takes each side's corners and who shoots from set pieces, from earlier matches, starters only.
+- **No instruction is built on these yet.** An instruction needs its own premise test (docs/strategy.md), and nothing here says how to defend a set piece, only how many to expect and from whom.

@@ -168,3 +168,12 @@ def test_replay_carries_result_calls_from_our_side():
             assert abs(sum(rc["chances"]) - 1) < 1e-9
             won = g["score"][0] > g["score"][1]
             assert rc["result"] == (0 if won else 2) and rc["points"] == (3 if won else 0)
+
+
+def test_replay_carries_set_piece_calls():
+    ev, matches = _league()
+    out = replay(ev, matches, team_id=1, start_fraction=0.5, kappa=10.0)
+    g = out["games"][0]
+    assert set(g["set_piece_calls"]["we"]) == {"corners", "sp_shots", "sp_xg"}
+    assert set(g["set_piece_players"]) == {"our_takers", "our_shooters", "their_takers", "their_shooters"}
+    assert out["summary"]["set_pieces"]["we"]["corners"]["n"] == len(out["games"])

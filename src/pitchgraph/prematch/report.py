@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from html import escape
 
-from pitchgraph.prematch.replay import CALLS
+from pitchgraph.prematch.replay import CALLS, SP_CALLS
 
 CSS = """
 body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#F6F3EE;color:#1D1D1F;margin:0;padding:24px 16px}
@@ -43,9 +43,9 @@ def _cell(c, fmt):
     return f'<td>{fmt.format(c["predicted"])} → <span class="{cls}">{fmt.format(c["actual"])}</span></td>'
 
 
-def _calls_table(calls, team, opp):
+def _calls_table(calls, team, opp, which=CALLS):
     rows = []
-    for feature, label, fmt in CALLS:
+    for feature, label, fmt in which:
         we, they = calls["we"].get(feature), calls["they"].get(feature)
         league = (we or they or {}).get("league")
         rows.append(f"<tr><td>{escape(label)}</td>{_cell(we, fmt)}{_cell(they, fmt)}"
@@ -105,6 +105,30 @@ def _result_summary(r, team):
             'on held-out seasons.</p>')
 
 
+def _set_pieces(g, team, opp):
+    calls, pl_ = g.get("set_piece_calls"), g.get("set_piece_players")
+    if not calls or not pl_:
+        return ""
+    return ("<h3>Set pieces</h3>" + _calls_table(calls, team, opp, SP_CALLS).split('<p class="small muted">')[0]
+            + f'<p class="small">Their corners are taken by {_names(pl_["their_takers"])}; their shots from set '
+            f'pieces come from <b>{_names(pl_["their_shooters"])}</b>. Ours are taken by '
+            f'{_names(pl_["our_takers"])} and finished by <b>{_names(pl_["our_shooters"])}</b>.</p>')
+
+
+def _set_piece_summary(sp, team):
+    if not sp or not sp.get("we"):
+        return ""
+    bits = []
+    for feature, label, fmt in SP_CALLS:
+        we, they = sp["we"].get(feature), sp["they"].get(feature)
+        if we and they:
+            bits.append(f'{escape(label).lower()}: {escape(team)} called {fmt.format(we["called"])}, got '
+                        f'{fmt.format(we["actual"])}; opponents called {fmt.format(they["called"])}, got '
+                        f'{fmt.format(they["actual"])}')
+    return ('<p>Set pieces over these games, ' + "; ".join(bits) + ". No instruction is built on these calls yet: "
+            "they say how much to expect, not how to defend it.</p>") if bits else ""
+
+
 def _strategy(lines):
     if not lines:
         return ('<h3>The plan</h3><p class="muted">Nothing about this match departs enough from the league to '
@@ -132,6 +156,7 @@ def _game(g, team):
     body = (_result_call(g.get("result_call"), team, g["opponent"]) + _lineup(p.get("lineup"), team, g["opponent"])
             + _strategy(g.get("strategy") or []))
     body += _calls_table(g["calls"], team, g["opponent"]) if g.get("calls") else ""
+    sp_block = _set_pieces(g, team, g["opponent"])
     body += (
         '<div class="cols"><div>'
         "<h3>Their pass to stop</h3>"
@@ -145,6 +170,7 @@ def _game(g, team):
         "<h3>Our way in</h3>"
         f'<p>Who takes the ball into the final third for us: <b>{_names(pl_["our_carriers"])}</b>.</p>'
         "</div></div>"
+        + sp_block +
         f'<p class="small muted">Built from {p["prior_matches"]["us"]} of our earlier matches and '
         f'{p["prior_matches"]["them"]} of theirs.</p>')
     o = g.get("outcome")
@@ -181,7 +207,7 @@ def _summary(s, team):
         f'average was, over {s["games"]} games.</p>'
         + (f'<p>The plans gave <b>{s["strategy_lines"]}</b> instructions; for <b>{s["strategy_premises_held"]}</b> '
            f'of them the situation the instruction was written for did occur in the match.</p>'
-           if s.get("strategy_lines") else "") + _result_summary(s.get("result_calls"), team) +
+           if s.get("strategy_lines") else "") + _result_summary(s.get("result_calls"), team) + _set_piece_summary(s.get("set_pieces"), team) +
         '<div class="scroll"><table><tr><th>Call</th>'
         f'<th>{escape(team)}: closer</th><th>skill</th><th>Opponents: closer</th><th>skill</th></tr>'
         + "".join(rows) + "</table></div>"
