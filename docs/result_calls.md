@@ -131,3 +131,32 @@ Tuning: 7 seasons (WSL 2019/20 and 2023/24, Indian Super League 2021/22, La Liga
 - My explanation for the first result (shrinkage understates every gap) was too simple. More likely the leagues differ: a number that fits unequal leagues is wrong for even ones.
 - **What the chances are good for:** ranking outcomes and beating base rates by 18%. **What they are not good for:** being read as exact to within 5 to 8 points.
 - Stopping here. No second attempt on this lockbox; a better model (per-league spread, or a rating that updates) would need new held-out data.
+
+
+## Pre-registered: league-aware shrinkage for the result call (written 2026-11-16, before running)
+
+**Diagnosis.** The stretch failed because the miscalibration is not uniform. Every call pulls a team toward the league with the same 5 pseudo-matches, whatever the league. In a very unequal league that is too much pull (favourites understated); in an even league it may be too little.
+
+**Change, with nothing tuned.** The number of pseudo-matches is estimated for each league from its own earlier matches, by the standard rule:
+
+- pseudo-matches = (match-to-match variance within a team) / (variance between teams' true levels),
+- the between-team variance is the variance of team averages minus the part expected from noise,
+- computed separately for a team's own record and for its record as an opponent, from earlier dates only,
+- limited to between 1 and 30; if a league shows no real spread between teams, 30.
+
+In an unequal league the ratio is small, so teams keep more of their own record. No number here is chosen by me or fitted to results.
+
+**Scope.** The threat calls behind the chances (xG, and goals for the comparison model). The nine style calls and the set-piece calls are unchanged.
+
+**Test.** The same 1,357 matches as the first result test, new model against the current one.
+
+1. **Sharper:** RPS lower, with the 90% interval of the difference above 0 (resampling whole matches 500 times).
+2. **Consistent:** RPS lower in both halves of the earlier split (the 7 tuning seasons and the 6 lockbox seasons), by point estimate.
+3. **Threat call not hurt:** the 90% interval of the change in threat-call skill is not entirely below 0.
+4. **Calibrated** (reported, and decides the wording in plans): no bin with at least 100 predictions off by more than 5 points.
+
+**Decision rule.** Adopt the new model for the chances and the shown threat calls only if 1, 2 and 3 all pass. The caution note in plans is removed only if 4 also passes.
+
+**Disclosure.** All 13 seasons have been looked at before, the lockbox once. There is no parameter to tune, which is the protection here, but this is not a blind test. No untouched full league seasons remain in the free data.
+
+**Stated expectation:** a small gain in RPS (0.001 to 0.003), bar 1 uncertain, calibration better at the top end but not inside 5 points everywhere.

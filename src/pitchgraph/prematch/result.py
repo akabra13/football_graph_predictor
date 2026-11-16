@@ -16,6 +16,7 @@ FEATS = ["xg", "goals", "goals_home", "goals_away", "home_win", "draw", "away_wi
 MODELS = ("xg", "goals", "blend", "base")
 FLOOR = 0.05                      # a call can go slightly negative; goals cannot
 BINS = [0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 1.0001]
+SHRINKAGE = "fixed"               # "eb" = league-aware pseudo-matches (docs/result_calls.md)
 STRETCH = 1.0                     # see docs/result_calls.md (calibration fix)
 GRID = [round(1.0 + 0.1 * i, 1) for i in range(11)]
 
@@ -71,7 +72,7 @@ def rps(p: np.ndarray, outcome: int) -> float:
 
 
 def result_calls(table: pl.DataFrame, dates: dict, start_fraction: float = 0.5, stretch: float | None = None,
-                 arrays: dict | None = None) -> dict:
+                 arrays: dict | None = None, pseudo: str | None = None) -> dict:
     """Every match of one season with a usable call.
 
     Returns `arrays` (the `asof_arrays` of the table, for the threat call's
@@ -79,7 +80,8 @@ def result_calls(table: pl.DataFrame, dates: dict, start_fraction: float = 0.5, 
     p: {model: [home, draw, away]}, xg, outcome, scored}}.
     """
     stretch = STRETCH if stretch is None else stretch
-    A = arrays if arrays is not None else asof_arrays(table, dates, FEATS, start_fraction=start_fraction)
+    A = arrays if arrays is not None else asof_arrays(table, dates, FEATS, start_fraction=start_fraction,
+                                                      pseudo=SHRINKAGE if pseudo is None else pseudo)
     k = {f: i for i, f in enumerate(FEATS)}
     home = table["home"].to_numpy()
     rows: dict = {}

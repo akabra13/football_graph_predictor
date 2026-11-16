@@ -14,8 +14,41 @@ from pitchgraph.prematch.lineups import overlap_weight
 MIN_PRIOR = 5
 
 
+def eb_pseudo(v: np.ndarray, groups: np.ndarray, lo: float = 1.0, hi: float = 30.0) -> np.ndarray:
+    """Per feature column: the number of pseudo-matches the data itself asks for.
+
+    Within-group (match-to-match) variance divided by the variance between
+    groups' true levels, the latter being the variance of group means minus
+    what noise alone would give. `hi` when there is no real spread.
+    """
+    K = v.shape[1]
+    out = np.full(K, hi)
+    ids, inv = np.unique(groups, return_inverse=True)
+    if len(ids) < 3:
+        return out
+    ok = np.isfinite(v)
+    x = np.where(ok, v, 0.0)
+    n, s, ss = (np.zeros((len(ids), K)) for _ in range(3))
+    np.add.at(n, inv, ok.astype(float))
+    np.add.at(s, inv, x)
+    np.add.at(ss, inv, x * x)
+    use = n >= 2
+    mean = np.divide(s, n, out=np.zeros_like(s), where=n > 0)
+    within = np.where(use, ss - n * mean ** 2, 0.0).sum(0)
+    dof = np.where(use, n - 1, 0.0).sum(0)
+    for j in range(K):
+        u = use[:, j]
+        if u.sum() < 3 or dof[j] <= 0:
+            continue
+        s2 = within[j] / dof[j]
+        tau2 = mean[u, j].var(ddof=1) - s2 * np.mean(1.0 / n[u, j])
+        if tau2 > 0 and s2 > 0:
+            out[j] = float(np.clip(s2 / tau2, lo, hi))
+    return out
+
+
 def asof_arrays(table: pl.DataFrame, dates: dict, features: list[str], start_fraction: float = 0.5,
-                xi: dict | None = None) -> dict:
+                xi: dict | None = None, pseudo: str = "fixed") -> dict:
     """Per row of `table`: actual, the full call, the team-only call and the
     league baseline for every feature (N x K arrays), plus `scored`: rows in
     the later part of the team's fixtures with at least MIN_PRIOR earlier matches.
@@ -42,11 +75,13 @@ def asof_arrays(table: pl.DataFrame, dates: dict, features: list[str], start_fra
         ok = np.isfinite(v)
         return (np.where(ok, v * w, 0.0).sum(0) + PSEUDO * league) / ((ok * w).sum(0) + PSEUDO)
 
-    def shrunk(rows: np.ndarray, league: np.ndarray) -> np.ndarray:
+    def shrunk(rows: np.ndarray, league: np.ndarray, k=PSEUDO) -> np.ndarray:
         if not rows.any():
             return league.copy()
         v = V[rows]
-        return (np.nansum(v, 0) + PSEUDO * league) / (np.isfinite(v).sum(0) + PSEUDO)
+        return (np.nansum(v, 0) + k * league) / (np.isfinite(v).sum(0) + k)
+
+    k_used = np.full((N, K), PSEUDO)
 
     for dd in np.unique(d):
         prior = d < dd
@@ -56,11 +91,15 @@ def asof_arrays(table: pl.DataFrame, dates: dict, features: list[str], start_fra
             cnt = np.isfinite(V[prior]).sum(0)
             league = np.where(cnt > 0, np.nansum(V[prior], 0) / np.maximum(cnt, 1), np.nan)
             sd = np.sqrt(np.where(cnt > 0, np.nansum((V[prior] - league) ** 2, 0) / np.maximum(cnt, 1), np.nan))
+        k_own = k_opp = PSEUDO
+        if pseudo == "eb":       # pseudo-matches from this league's own spread so far
+            k_own, k_opp = eb_pseudo(V[prior], team[prior]), eb_pseudo(V[prior], opp[prior])
         for r in np.flatnonzero(d == dd):
             sd_[r] = sd
+            k_used[r] = k_own
             mine = prior & (team == team[r])
-            own = shrunk(mine, league)
-            against = shrunk(prior & (opp == opp[r]), league)
+            own = shrunk(mine, league, k_own)
+            against = shrunk(prior & (opp == opp[r]), league, k_opp)
             call[r], own_[r], league_[r] = own + against - league, own, league
             n_prior[r] = int(mine.sum())
             if xi is not None:
@@ -79,7 +118,7 @@ def asof_arrays(table: pl.DataFrame, dates: dict, features: list[str], start_fra
         later[order[int(len(order) * start_fraction):]] = True
     return {"actual": V, "call": call, "own": own_, "league": league_, "league_sd": sd_, "match": mid,
             "team": team, "opp": opp, "call_xi": call_xi, "call_xin": call_xin,
-            "scored": later & (n_prior >= MIN_PRIOR)}
+            "k_own": k_used, "scored": later & (n_prior >= MIN_PRIOR)}
 
 
 def pooled_skill(parts: list[dict], k: int, n_boot: int = 500, seed: int = 0) -> dict:

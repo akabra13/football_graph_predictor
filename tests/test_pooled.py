@@ -151,3 +151,20 @@ def test_usual_reference_removes_the_teams_own_level():
     assert reference_value(call, "we", "usual") == 0.58
     assert abs(reference_value(call, "they", "usual") - 0.52) < 1e-12
     assert abs(departure(call, +1, "we", "usual") - 0.4) < 1e-9 and abs(departure(call, +1) - 2.0) < 1e-9
+
+
+def test_eb_pseudo_follows_the_real_spread_between_teams():
+    from pitchgraph.prematch.pooled import eb_pseudo
+    rng = np.random.default_rng(0)
+    groups = np.repeat(np.arange(20), 30)
+    wide = rng.normal(size=20)[groups] * 2.0 + rng.normal(size=600)      # true ratio 1/4 -> clipped to 1
+    even = rng.normal(size=20)[groups] * 0.25 + rng.normal(size=600)     # true ratio 16
+    none = rng.normal(size=600)                                          # no spread -> maximum pull
+    k = eb_pseudo(np.column_stack([wide, even, none]), groups)
+    assert k[0] == 1.0 and 6 < k[1] <= 30 and k[2] > 15
+    table, dates = _table(team_effect=2.0, rounds=6)
+    fixed, eb = asof_arrays(table, dates, ["f"]), asof_arrays(table, dates, ["f"], pseudo="eb")
+    s = fixed["scored"]
+    assert (fixed["k_own"] == 5.0).all() and (eb["k_own"][s] < 5.0).all()
+    err = lambda p: float(((p["call"][s, 0] - p["actual"][s, 0]) ** 2).mean())
+    assert err(eb) < err(fixed)                                          # big real gaps: less pull is better

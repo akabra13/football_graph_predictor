@@ -74,4 +74,5 @@ jobs:
             setpiece_audit.json
             setpiece_premises.json
             game_premises.json
+            result_model.json
           if-no-files-found: ignore
