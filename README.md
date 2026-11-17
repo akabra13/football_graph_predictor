@@ -23,6 +23,7 @@ Built on open data only. Every claim is pre-registered or tested, and failures a
 - **Set pieces: volume is knowable, quality is not.** Corners (skill 0.17), set-piece shots (0.11) and set-piece xG (0.07) can be called before kick-off; shots per corner cannot. See [docs/set_pieces.md](docs/set_pieces.md).
 - **Instructions are about the opponent, not the team.** Each line in a plan fires when a call differs from a normal week for that team, and the situation it is written for then occurs 63 to 89% of the time (18 of 18 rules hold over 2,741 team-matches). See [docs/strategy.md](docs/strategy.md).
 - **Whether following a plan helps is not shown.** Five instructions could be checked against what teams did while the score was level; none showed evidence either way. Pressing high goes with better outcomes whether or not the plan asks for it. See [docs/followed.md](docs/followed.md).
+- **Frozen for a blind test.** Tag `prematch-v1` is scored automatically on any competition-season StatsBomb releases after 2026-11-16, against bars written beforehand. No such data exists yet. See [docs/blind_test.md](docs/blind_test.md).
 - **The main lever is real, the rest of the plan is not proven.** Passes from a half-space into the centre of the final third are worth 12-14% of a team's threat in real matches, as the planner says; its ranking of smaller links and its team-specific numbers did not pass. See [docs/denial_test.md](docs/denial_test.md).
 - **Data:** 80 competition-seasons, 3,960 matches, 13.9M events, refreshed weekly by GitHub Actions.
 

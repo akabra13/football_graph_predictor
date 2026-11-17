@@ -30,7 +30,7 @@ Reported without a verdict: each of the twelve tactical and set-piece calls show
 
 ### Reading rules
 
-- **No verdict below 300 scored team-matches** (about one and a half league seasons). Smaller releases are reported and kept; unseen seasons accumulate, and the verdict is read the first time the pooled total reaches 300. Later runs are reported as updates, not as second attempts.
+- **No verdict below 300 scored team-matches** (about one 20-team league season: only the later half of each team's fixtures is scored). Smaller releases are reported and kept; unseen seasons accumulate, and the verdict is read the first time the pooled total reaches 300. Later runs are reported as updates, not as second attempts.
 - **A claim that fails is withdrawn** from the README's headline until a later frozen version passes on data released after its own tag.
 - **Nothing is tuned on unseen seasons before their blind result is recorded here.** After that they join the seen set for the next version.
 - Tournaments and single-club releases fail the 8-teams rule and are skipped. They are listed, not scored.
@@ -52,7 +52,11 @@ Reported without a verdict: each of the twelve tactical and set-piece calls show
 
 ## Rehearsal (2026-11-16, on seen data, not a result)
 
-Pending.
+Run on the FA Women's Super League 2018/19, one of the 13 seasons everything was built on, to check the script end to end. The first attempt crashed on a programming error (fixed before tagging), which is what a rehearsal is for.
+
+- 110 scored team-matches, 53 matches. Threat skill 0.476 (0.360 to 0.575). Result call RPS 0.1675, 0.082 better than base rates (0.048 to 0.111). 379 instructions issued; the situation occurred in 82% (79 to 85%).
+- The script correctly gave no verdict: 110 is below 300.
+- These are seen-data figures for one favourable league. They are not evidence of anything new.
 
 ## Results
 
