@@ -1,0 +1,74 @@
+name: Blind test
+
+# The frozen version (tag prematch-v1) scored only on competition-seasons that
+# StatsBomb released after the freeze (docs/blind_test.md). Runs after the weekly
+# ingest; costs one small request when nothing is new. Streams from StatsBomb
+# Open Data; no Drive access needed.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Version to score (the frozen tag)"
+        required: false
+        default: "prematch-v1"
+      rehearse:
+        description: "Seen keys to treat as new, e.g. 37_4 (plumbing check only, not a result)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  blind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || 'prematch-v1' }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pitchgraph
+        run: pip install -e .
+
+      - name: Score unseen seasons
+        id: score
+        env:
+          REHEARSE: ${{ inputs.rehearse }}
+        run: |
+          if [ -n "$REHEARSE" ]; then
+            python scripts/blind_test.py --rehearse $REHEARSE | tee blind_test.txt
+          else
+            python scripts/blind_test.py | tee blind_test.txt
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: blind-test
+          path: |
+            blind_test.json
+            blind_test.txt
+          if-no-files-found: ignore
+
+      - name: Tell the owner that unseen data was scored
+        if: steps.score.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Blind test ran on new StatsBomb data: $(python -c "import json; print(', '.join(json.load(open('blind_test.json'))['used']))")"
+          if [ -z "$(gh issue list --repo "$REPO" --state all --search "in:title \"$title\"" --json number --jq '.[].number')" ]; then
+            { echo "Run: $RUN_URL"; echo; echo '```'; cat blind_test.txt; echo '```'; echo; echo "Record this in docs/blind_test.md before using these seasons for anything else."; } > body.md
+            gh issue create --repo "$REPO" --title "$title" --body-file body.md
+          fi
