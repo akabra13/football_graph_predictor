@@ -69,7 +69,7 @@ if __name__ == "__main__":
         lake = Lake.stream([key])
         matches = lake.matches()
         dates = dict(zip(matches["match_id"].to_list(), matches["match_date"].to_list()))
-        ev = lake.events().collect()
+        ev = lake.events().collect().lazy()       # same shape the pooled scripts pass
         store = CountStore.from_events(ev, TACTICAL)
         units = season_table(store)
         rtable = result_table(ev, matches)

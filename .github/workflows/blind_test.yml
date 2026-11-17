@@ -45,6 +45,7 @@ jobs:
         env:
           REHEARSE: ${{ inputs.rehearse }}
         run: |
+          set -o pipefail
           if [ -n "$REHEARSE" ]; then
             python scripts/blind_test.py --rehearse $REHEARSE | tee blind_test.txt
           else
